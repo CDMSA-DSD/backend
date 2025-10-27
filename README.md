@@ -18,7 +18,11 @@
 2. Run the Spring Boot application with the development profile:
 
     ```bash
-    ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+    ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev # Linux
+    ```
+
+    ```bash
+    .\mvnw spring-boot:run "-Dspring-boot.run.profiles=dev" # Windows
     ```
 
 3. Test the application in your browser:
