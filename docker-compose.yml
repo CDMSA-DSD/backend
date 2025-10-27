@@ -1,0 +1,22 @@
+services:
+  mariadb:
+    image: mariadb:11.4   
+    container_name: cdmsa-mariadb
+    environment:
+      MARIADB_DATABASE: cdmsa           # db name
+      MARIADB_USER: cdmsa               # db user
+      MARIADB_PASSWORD: cdmsa           # user password
+      MARIADB_ROOT_PASSWORD: root       # root password
+    ports:
+      - "3306:3306"                     
+    volumes:
+      - dbdata:/var/lib/mysql           
+    healthcheck:                        
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped             # reset if breaks down
+
+volumes:
+  dbdata:                               # volume where data is store

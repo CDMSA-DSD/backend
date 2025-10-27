@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: cdmsa
+server:
+  port: 8080
