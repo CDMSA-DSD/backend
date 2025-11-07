@@ -6,7 +6,9 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 import dsd.api.cdmsa.exception.UserExistsException;
+import dsd.api.cdmsa.exception.UserNotFoundException;
 import dsd.api.cdmsa.model.User;
+import dsd.api.cdmsa.payload.LoginRequest;
 import dsd.api.cdmsa.repository.UserRepository;
 
 import lombok.AllArgsConstructor;
@@ -45,6 +47,15 @@ public class UserService {
 
     public void deleteUser(int id) {
         repository.deleteById(id);
+    }
+
+    public boolean login (LoginRequest dto){
+        User user = repository.findByUsername(dto.getUsername()).orElseThrow(() -> new UserNotFoundException(dto.getUsername()));
+        if (user.getPassword().equals(dto.getPassword())) {
+            return true;
+        }
+        return false;
+
     }
 
 }

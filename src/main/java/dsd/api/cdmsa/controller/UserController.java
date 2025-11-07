@@ -8,6 +8,7 @@ import java.util.List;
 
 import dsd.api.cdmsa.exception.*;
 import dsd.api.cdmsa.model.User;
+import dsd.api.cdmsa.payload.LoginRequest;
 import dsd.api.cdmsa.service.UserService;
 
 import jakarta.validation.Valid;
@@ -23,11 +24,22 @@ public class UserController {
     // POST users
     @PostMapping()
     ResponseEntity<Void> newUser(@Valid @RequestBody User newUser) {
-
         // Store user
         User user = service.createUser(newUser);
         // Return answer
         return ResponseEntity.created(linkTo(UserController.class).slash(user.getId()).toUri()).build();
+    }
+
+    @PostMapping("/login")
+    ResponseEntity<String> login(@Valid @RequestBody LoginRequest login) {
+        // Checks credentials
+        if (service.login(login)) {
+            // Return answer
+            return ResponseEntity.ok().body("Login successful");
+        }
+
+        return ResponseEntity.status(401).body("Invalid username or password");
+
     }
 
     // GET user (individual)
