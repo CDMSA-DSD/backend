@@ -1,7 +1,22 @@
 package dsd.api.cdmsa.model;
 
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "rfc")
@@ -34,11 +49,11 @@ public class RFC {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Status status = Status.DRAFT;
+    private Status status = Status.UNDER_REVIEW;
 
     @OneToOne(mappedBy = "rfc", cascade = CascadeType.ALL, orphanRemoval = true)
     private ADR adr;
-    
+
     @OneToMany(mappedBy = "rfc", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.Set<Observer> observers = new java.util.HashSet<>();
 
@@ -52,7 +67,9 @@ public class RFC {
     private java.util.Set<Alternative> alternatives = new java.util.HashSet<>();
 
     public enum Status {
-        DRAFT, UNDER_REVIEW, APPROVED, REJECTED
+        UNDER_REVIEW, // active RFC on review status
+        CLOSED_DECIDED, // Closed with alternative
+        CLOSED_NON_DECIDED // Closed without alternative
     }
 
 }
