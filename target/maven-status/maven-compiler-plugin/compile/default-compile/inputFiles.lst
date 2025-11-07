@@ -20,6 +20,8 @@
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/model/TemplateSection.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/model/User.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/model/UserRFCId.java
+/home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/payload/OrgAdminRequest.java
+/home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/payload/OrgAdminResponse.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/repository/OrgRepository.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/repository/UserRepository.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/service/OrgService.java

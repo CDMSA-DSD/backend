@@ -20,41 +20,31 @@ public class UserController {
 
     private final UserService service;
 
-    //POST users
+    // POST users
     @PostMapping()
     ResponseEntity<Void> newUser(@Valid @RequestBody User newUser) {
-        // Check if a user already exist
-        if (!service.existUser(newUser.getEmail())) {
-            // Store user
-            User user = service.createUser(newUser);
-            // Return answer
-            return ResponseEntity.created(linkTo(UserController.class).slash(user.getId()).toUri()).build();
-        }
-        // Instead throw a exception that return 409- CONFLICT
-        throw new UserExistsException(newUser.getName());
+
+        // Store user
+        User user = service.createUser(newUser);
+        // Return answer
+        return ResponseEntity.created(linkTo(UserController.class).slash(user.getId()).toUri()).build();
     }
 
-    //GET user (individual)
-    @GetMapping(
-        value = "/{id}", 
-        produces = { "application/json"}
-        )
+    // GET user (individual)
+    @GetMapping(value = "/{id}", produces = { "application/json" })
     public ResponseEntity<User> getUser(@PathVariable Integer id) {
         User user = service.searchById(id).orElseThrow(() -> new UserNotFoundException(id));
         return ResponseEntity.ok(user);
     }
 
-    //GET users (collection)
-    @GetMapping(
-        value = "", 
-        produces = {"application/json"}
-        )
+    // GET users (collection)
+    @GetMapping(value = "", produces = { "application/json" })
     public ResponseEntity<List<User>> getUsers() {
         List<User> users = service.findUsers();
         return ResponseEntity.ok(users);
     }
 
-    //PUT user
+    // PUT user
     @PutMapping("/{id}")
     public ResponseEntity<Void> replaceUser(@Valid @RequestBody User newUser, @PathVariable Integer id) {
         service.searchById(id).map(User -> {
@@ -68,7 +58,7 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
-    //DELETE user
+    // DELETE user
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Integer id) {
         if (service.existUserById(id)) {

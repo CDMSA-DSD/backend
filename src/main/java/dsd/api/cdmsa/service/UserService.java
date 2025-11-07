@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
+import dsd.api.cdmsa.exception.UserExistsException;
 import dsd.api.cdmsa.model.User;
 import dsd.api.cdmsa.repository.UserRepository;
 
@@ -21,7 +22,13 @@ public class UserService {
     }
 
     public User createUser(User user) {
-        return repository.save(user);
+        // Check if a user already exist
+        if (!existUser(user.getEmail())) {
+            // Store user
+            return repository.save(user);
+        }
+        // Instead throw a exception that return 409- CONFLICT
+        throw new UserExistsException(user.getName());
     }
 
     public Optional<User> searchById(int id) {

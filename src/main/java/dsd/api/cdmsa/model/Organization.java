@@ -3,6 +3,7 @@ package dsd.api.cdmsa.model;
 import java.util.ArrayList;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
@@ -30,6 +31,7 @@ public class Organization {
     private String description;
 
     @OneToOne
+    @JsonIgnoreProperties({"org"})
     @JoinColumn(name = "admin_user_id", unique = true)
     private User adminUser;
 
