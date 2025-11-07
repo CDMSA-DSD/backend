@@ -1,15 +1,25 @@
 package dsd.api.cdmsa.service;
 
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import dsd.api.cdmsa.dto.AlternativeResponse;
+import dsd.api.cdmsa.dto.CreateAlternativeRequest;
 import dsd.api.cdmsa.dto.CreateRfcRequest;
 import dsd.api.cdmsa.dto.RfcResponse;
+import dsd.api.cdmsa.exception.RfcAlternativeBadRequestException;
+import dsd.api.cdmsa.exception.RfcAlternativeNotAllowedException;
 import dsd.api.cdmsa.exception.RfcBadRequestException;
 import dsd.api.cdmsa.exception.RfcDependencyNotFoundException;
+import dsd.api.cdmsa.exception.RfcInvalidStatusException;
+import dsd.api.cdmsa.exception.RfcNotFoundException;
+import dsd.api.cdmsa.model.Alternative;
 import dsd.api.cdmsa.model.RFC;
+import dsd.api.cdmsa.repository.AlternativeRepository;
 import dsd.api.cdmsa.repository.OrganizationRepository;
 import dsd.api.cdmsa.repository.RfcRepository;
 import dsd.api.cdmsa.repository.TemplateRepository;
@@ -20,28 +30,21 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class RfcService {
 
-    // Repositories injected via constructor (Lombok @RequiredArgsConstructor)
+    // Existing repositories
     private final RfcRepository rfcRepository;
     private final UserRepository userRepository;
     private final TemplateRepository templateRepository;
     private final OrganizationRepository organizationRepository;
 
-    /**
-     * Creates a new RFC and stores it in the database.
-     *
-     * Rules:
-     * - title, description, templateId and orgId are required.
-     * - RFC is created with status UNDER_REVIEW (default in RFC entity).
-     * - User (author), Template and Organization must exist.
-     *
-     * @param userId  ID of the RFC author (current authenticated user)
-     * @param request Payload with RFC creation data
-     * @return RFCResponse DTO representing the created RFC
-     */
+    // NEW: repository for RFC alternatives
+    private final AlternativeRepository alternativeRepository;
+
+    // ---------- US-12: Create RFC ----------
+
     @Transactional
     public RfcResponse createRfc(Long userId, CreateRfcRequest request) {
 
-        // --- Validate request body ---
+        // Validate request body
         if (request == null) {
             throw new RfcBadRequestException("Request body cannot be null");
         }
@@ -58,50 +61,36 @@ public class RfcService {
             throw new RfcBadRequestException("OrgId is required");
         }
 
-        // --- Validate and load related entities ---
-
-        // Author must exist
+        // Validate related entities
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new RfcDependencyNotFoundException("User (author) not found"));
 
-        // Template must exist
         var template = templateRepository.findById(request.templateId())
                 .orElseThrow(() -> new RfcDependencyNotFoundException("Template not found"));
 
-        // Organization must exist
         var org = organizationRepository.findById(request.orgId())
                 .orElseThrow(() -> new RfcDependencyNotFoundException("Organization not found"));
 
-        // --- Build RFC entity ---
+        // Build RFC entity
         RFC rfc = new RFC();
         rfc.setTitle(request.title().trim());
         rfc.setDescription(request.description().trim());
         rfc.setTemplate(template);
         rfc.setOrg(org);
         rfc.setUser(user);
-        // Status is set to UNDER_REVIEW by default in RFC model
+        // Status defaults to UNDER_REVIEW in RFC model
 
-        // --- Persist and map to response DTO ---
+        // Persist and map
         RFC saved = rfcRepository.save(rfc);
         return toResponse(saved);
     }
 
-    /**
-     * Returns a paginated list of existing RFCs.
-     *
-     * @param pageable Pagination and sorting information
-     * @return Page of RFCResponse DTOs
-     */
     @Transactional(readOnly = true)
     public Page<RfcResponse> listRfcs(Pageable pageable) {
         return rfcRepository.findAll(pageable)
                 .map(this::toResponse);
     }
 
-    /**
-     * Maps an RFC entity to a RFCResponse DTO.
-     * Keeps controllers decoupled from persistence details.
-     */
     private RfcResponse toResponse(RFC rfc) {
         return new RfcResponse(
                 rfc.getId(),
@@ -111,5 +100,85 @@ public class RfcService {
                 rfc.getTemplate().getId(),
                 rfc.getOrg().getId(),
                 rfc.getStatus());
+    }
+
+    // ---------- Alternatives (POST & GET) ----------
+
+    /**
+     * Creates a new alternative for a given RFC.
+     *
+     * Rules:
+     * - RFC must exist.
+     * - RFC must be in UNDER_REVIEW status.
+     * - Only the RFC author is allowed to create alternatives.
+     * - title and description are required.
+     *
+     * @param rfcId   ID of the target RFC
+     * @param userId  ID of the current user (author candidate)
+     * @param request Alternative creation payload
+     * @return AlternativeResponse DTO
+     */
+    @Transactional
+    public AlternativeResponse addAlternative(Long rfcId, Long userId, CreateAlternativeRequest request) {
+
+        // Validate basic payload
+        if (request == null) {
+            throw new RfcAlternativeBadRequestException("Request body cannot be null");
+        }
+        if (request.title() == null || request.title().isBlank()) {
+            throw new RfcAlternativeBadRequestException("Title is required");
+        }
+        if (request.description() == null || request.description().isBlank()) {
+            throw new RfcAlternativeBadRequestException("Description is required");
+        }
+
+        // Load RFC
+        RFC rfc = rfcRepository.findById(rfcId)
+                .orElseThrow(() -> new RfcNotFoundException("RFC not found with id " + rfcId));
+
+        // Check status: only UNDER_REVIEW allows new alternatives
+        if (rfc.getStatus() != RFC.Status.UNDER_REVIEW) {
+            throw new RfcInvalidStatusException(
+                    "Alternatives can only be created for RFCs in UNDER_REVIEW status");
+        }
+
+        // Check authorization: only RFC author can create alternatives
+        if (!rfc.getUser().getId().equals(userId)) {
+            throw new RfcAlternativeNotAllowedException(
+                    "Only the author of the RFC is allowed to create alternatives");
+        }
+
+        // Build and persist alternative
+        Alternative alternative = new Alternative();
+        alternative.setRfc(rfc);
+        alternative.setTitle(request.title().trim());
+        alternative.setDescription(request.description().trim());
+        alternative.setAuthor(rfc.getUser());
+
+        // If pros/cons exist in the request and entity:
+        alternative.setPros(request.pros());
+        alternative.setCons(request.cons());
+
+        Alternative saved = alternativeRepository.save(alternative);
+        return AlternativeResponse.fromEntity(saved);
+    }
+
+    /**
+     * Returns all alternatives for a given RFC.
+     *
+     * @param rfcId ID of the RFC
+     * @return List of AlternativeResponse
+     */
+    @Transactional(readOnly = true)
+    public List<AlternativeResponse> listAlternatives(Long rfcId) {
+
+        // Ensure RFC exists (helps return 404 instead of empty list for invalid id)
+        if (!rfcRepository.existsById(rfcId)) {
+            throw new RfcNotFoundException("RFC not found with id " + rfcId);
+        }
+
+        return alternativeRepository.findByRfcId(rfcId).stream()
+                .map(AlternativeResponse::fromEntity)
+                .toList();
     }
 }

@@ -34,4 +34,32 @@ public class RFCExceptionAdvice {
                 "message", ex.getMessage(),
                 "timestamp", LocalDateTime.now()));
     }
+
+    @ExceptionHandler({
+            RfcAlternativeBadRequestException.class
+    })
+    public ResponseEntity<Map<String, Object>> handleBadRequest(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                "error", "Bad Request",
+                "message", ex.getMessage(),
+                "timestamp", LocalDateTime.now()));
+    }
+
+    @ExceptionHandler({
+            RfcAlternativeNotAllowedException.class
+    })
+    public ResponseEntity<Map<String, Object>> handleForbidden(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                "error", "Forbidden",
+                "message", ex.getMessage(),
+                "timestamp", LocalDateTime.now()));
+    }
+
+    @ExceptionHandler(RfcInvalidStatusException.class)
+    public ResponseEntity<Map<String, Object>> handleConflict(RfcInvalidStatusException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                "error", "Invalid RFC status",
+                "message", ex.getMessage(),
+                "timestamp", LocalDateTime.now()));
+    }
 }

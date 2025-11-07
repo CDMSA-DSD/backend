@@ -1,11 +1,16 @@
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\CdmsaApplication.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\controller\HelloController.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\controller\RfcController.java
+C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\AlternativeResponse.java
+C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\CreateAlternativeRequest.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\CreateRfcRequest.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\RfcResponse.java
+C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\exception\RfcAlternativeBadRequestException.java
+C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\exception\RfcAlternativeNotAllowedException.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\exception\RfcBadRequestException.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\exception\RfcDependencyNotFoundException.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\exception\RFCExceptionAdvice.java
+C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\exception\RfcInvalidStatusException.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\exception\RfcNotFoundException.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\model\ADR.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\model\Alternative.java
@@ -18,6 +23,7 @@ C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\m
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\model\TemplateSection.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\model\User.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\model\UserRFCID.java
+C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\repository\AlternativeRepository.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\repository\OrganizationRepository.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\repository\RfcRepository.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\repository\TemplateRepository.java
