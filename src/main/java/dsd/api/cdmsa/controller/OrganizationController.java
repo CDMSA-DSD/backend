@@ -1,36 +1,51 @@
 package dsd.api.cdmsa.controller;
 
-import dsd.api.cdmsa.dto.OrganizationRequest;
-import dsd.api.cdmsa.model.Organization;
+import dsd.api.cdmsa.dto.OrganizationResponse;
+import dsd.api.cdmsa.dto.UpdateOrganizationRequest;
 import dsd.api.cdmsa.service.OrganizationService;
-import org.springframework.hateoas.Link;
-import org.springframework.hateoas.RepresentationModel;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/orgdetails")
+@RequestMapping("/org_details")
+@RequiredArgsConstructor
 public class OrganizationController {
 
     private final OrganizationService orgService;
 
-    public OrganizationController(OrganizationService orgService) {
-        this.orgService = orgService;
+    /**
+     * Retrieves the current user id from the request.
+     * For this sprint we use a simple header-based approach ("X-User-Id"),
+     * which should be replaced by a proper authentication mechanism later.
+     */
+    private Long getCurrentUserId(HttpServletRequest request) {
+        String header = request.getHeader("X-User-Id");
+        if (header == null || header.isBlank()) {
+            // For development/demo purposes only.
+            // In production, this must be replaced by authenticated user context.
+            return 1L;
+        }
+        return Long.parseLong(header);
     }
 
-    // Get organization details -- better take the org id from the user, let'see how we implement login (http session or spring security?)
-    @GetMapping("/{id}")
-    public ResponseEntity<Organization> getOrgDetails(@PathVariable Long id) {
-        // check if user is logged ...
-        Organization org = orgService.getOrgDetails(id);
+    // Get organization details
+    @GetMapping
+    public ResponseEntity<OrganizationResponse> getOrgDetails(HttpServletRequest httpRequest) {
+        // TO DO - check if user is logged ...
+        Long userId = getCurrentUserId(httpRequest);
+        OrganizationResponse org = orgService.getOrgDetails(userId);
         return ResponseEntity.ok(org);
     }
 
-    // Update organization details -- dto probably substitutable with organization object
-    @PutMapping("/{id}")
-    public ResponseEntity<Organization> updateOrgDetails(@PathVariable Long id, @RequestBody OrganizationRequest request) {    // add @Valid?
-        // check if user is logged ...
-        Organization updated = orgService.updateOrgDetails(id, request);
-        return ResponseEntity.ok(updated);
+    // Update organization details
+    @PutMapping()
+    public ResponseEntity<OrganizationResponse> updateOrgDetails(@Valid @RequestBody UpdateOrganizationRequest request, HttpServletRequest httpRequest) {
+        // TO DO - check if user is logged ...
+        Long userId = getCurrentUserId(httpRequest);
+        OrganizationResponse orgUpdated = orgService.updateOrgDetails(userId, request);
+        return ResponseEntity.ok(orgUpdated);
     }
 }
