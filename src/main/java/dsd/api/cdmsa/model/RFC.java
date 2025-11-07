@@ -34,7 +34,7 @@ public class RFC {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Status status = Status.DRAFT;
+    private Status status = Status.UNDER_REVIEW;
 
     @OneToOne(mappedBy = "rfc", cascade = CascadeType.ALL, orphanRemoval = true)
     private ADR adr;
@@ -52,7 +52,7 @@ public class RFC {
     private java.util.Set<Alternative> alternatives = new java.util.HashSet<>();
 
     public enum Status {
-        DRAFT, UNDER_REVIEW, APPROVED, REJECTED
+        UNDER_REVIEW, CLOSED_DECIDED, CLOSED_NON_DECIDED
     }
 
 }
