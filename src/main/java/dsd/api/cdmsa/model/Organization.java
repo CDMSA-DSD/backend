@@ -2,6 +2,8 @@ package dsd.api.cdmsa.model;
 
 import java.util.ArrayList;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -32,9 +34,11 @@ public class Organization {
     private User adminUser;
 
     @OneToMany(mappedBy = "org")
+    @JsonIgnore
     private java.util.List<User> users = new ArrayList<>();
 
     @OneToMany(mappedBy = "org")
+    @JsonIgnore
     private java.util.List<RFC> rfcs = new ArrayList<>();
 
 }
