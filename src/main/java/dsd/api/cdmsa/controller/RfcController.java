@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import dsd.api.cdmsa.dto.AlternativeResponse;
+import dsd.api.cdmsa.dto.CloseRfcRequest;
 import dsd.api.cdmsa.dto.CreateAlternativeRequest;
 import dsd.api.cdmsa.dto.CreateRfcRequest;
 import dsd.api.cdmsa.dto.RfcResponse;
@@ -112,6 +113,18 @@ public class RfcController {
             @PathVariable Long rfcId) {
         List<AlternativeResponse> alternatives = rfcService.listAlternatives(rfcId);
         return ResponseEntity.ok(alternatives);
+    }
+
+    // ------------------------ Close RFC ----------------------
+
+    @PostMapping("/{rfcId}/close")
+    public ResponseEntity<RfcResponse> closeRfc(
+            @PathVariable Long rfcId,
+            @RequestBody CloseRfcRequest request,
+            HttpServletRequest httpRequest) {
+        Long userId = getCurrentUserId(httpRequest);
+        RfcResponse response = rfcService.closeRfc(rfcId, userId, request);
+        return ResponseEntity.ok(response);
     }
 
 }

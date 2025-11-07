@@ -1,7 +1,10 @@
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\CdmsaApplication.java
+C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\controller\AdrController.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\controller\HelloController.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\controller\RfcController.java
+C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\AdrRequest.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\AlternativeResponse.java
+C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\CloseRfcRequest.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\CreateAlternativeRequest.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\CreateRfcRequest.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\RfcResponse.java
@@ -23,9 +26,11 @@ C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\m
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\model\TemplateSection.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\model\User.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\model\UserRFCID.java
+C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\repository\AdrRepository.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\repository\AlternativeRepository.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\repository\OrganizationRepository.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\repository\RfcRepository.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\repository\TemplateRepository.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\repository\UserRepository.java
+C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\service\AdrService.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\service\RfcService.java

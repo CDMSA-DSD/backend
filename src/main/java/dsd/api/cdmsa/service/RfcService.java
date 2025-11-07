@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import dsd.api.cdmsa.dto.AlternativeResponse;
+import dsd.api.cdmsa.dto.CloseRfcRequest;
 import dsd.api.cdmsa.dto.CreateAlternativeRequest;
 import dsd.api.cdmsa.dto.CreateRfcRequest;
 import dsd.api.cdmsa.dto.RfcResponse;
@@ -17,6 +18,7 @@ import dsd.api.cdmsa.exception.RfcBadRequestException;
 import dsd.api.cdmsa.exception.RfcDependencyNotFoundException;
 import dsd.api.cdmsa.exception.RfcInvalidStatusException;
 import dsd.api.cdmsa.exception.RfcNotFoundException;
+import dsd.api.cdmsa.model.ADR;
 import dsd.api.cdmsa.model.Alternative;
 import dsd.api.cdmsa.model.RFC;
 import dsd.api.cdmsa.repository.AlternativeRepository;
@@ -35,9 +37,9 @@ public class RfcService {
     private final UserRepository userRepository;
     private final TemplateRepository templateRepository;
     private final OrganizationRepository organizationRepository;
-
-    // NEW: repository for RFC alternatives
     private final AlternativeRepository alternativeRepository;
+
+    private final AdrService adrService;
 
     // ---------- US-12: Create RFC ----------
 
@@ -181,4 +183,46 @@ public class RfcService {
                 .map(AlternativeResponse::fromEntity)
                 .toList();
     }
+
+    @Transactional
+    public RfcResponse closeRfc(Long rfcId, Long userId, CloseRfcRequest request) {
+        RFC rfc = rfcRepository.findById(rfcId)
+                .orElseThrow(() -> new RfcNotFoundException("RFC not found with id " + rfcId));
+
+        if (rfc.getStatus() != RFC.Status.UNDER_REVIEW) {
+            throw new RfcInvalidStatusException("RFC is not under review");
+        }
+
+        if (rfc.getUser().getId() != userId) {
+            throw new RfcAlternativeNotAllowedException("Only the author can close this RFC");
+        }
+
+        // Case 1: closed with alternative (US-22)
+        if (request.alternativeId() != null) {
+            Alternative winningAlt = alternativeRepository.findById(request.alternativeId())
+                    .orElseThrow(
+                            () -> new RfcNotFoundException("Alternative not found with id " + request.alternativeId()));
+
+            if (!winningAlt.getRfc().getId().equals(rfc.getId())) {
+                throw new RfcAlternativeBadRequestException("Alternative does not belong to this RFC");
+            }
+
+            rfc.setStatus(RFC.Status.CLOSED_DECIDED);
+            // Link winning alternative
+            // rfc.setWinningAlternative(winningAlt); // si tienes este campo
+
+            // Create ADR draft (using AdrService)
+            ADR adr = adrService.createDraftFromRfcAndAlternative(rfc, winningAlt);
+            rfc.setAdr(adr);
+        }
+        // Case 2: closed without alternative (US-23)
+        else {
+            rfc.setStatus(RFC.Status.CLOSED_NON_DECIDED);
+            // Puedes guardar el motivo de cierre si tu modelo lo soporta
+        }
+
+        RFC saved = rfcRepository.save(rfc);
+        return toResponse(saved);
+    }
+
 }
