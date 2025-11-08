@@ -23,7 +23,7 @@ public class AdrService {
 
     @Transactional
     public AdrResponse createAdr(CreateAdrRequest request) {
-        // eventually put some checks ...
+        // eventually put some checks on the request (but we used @Valid so maybe not needed) ...
 
         RFC rfc = rfcRepository.findById(request.rfcId())
                 .orElseThrow(() -> new EntityNotFoundException("RFC not found with id " + request.rfcId()));
