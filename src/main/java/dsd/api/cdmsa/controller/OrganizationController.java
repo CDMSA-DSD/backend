@@ -41,7 +41,7 @@ public class OrganizationController {
     }
 
     // Update organization details
-    @PutMapping()
+    @PutMapping
     public ResponseEntity<OrganizationResponse> updateOrgDetails(@Valid @RequestBody UpdateOrganizationRequest request, HttpServletRequest httpRequest) {
         // TO DO - check if user is logged ...
         Long userId = getCurrentUserId(httpRequest);
