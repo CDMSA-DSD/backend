@@ -15,6 +15,7 @@ import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 
 @RestController
+@CrossOrigin(origins = "*")
 @RequestMapping("/users")
 @AllArgsConstructor
 public class UserController {
@@ -44,7 +45,7 @@ public class UserController {
 
     // GET user (individual)
     @GetMapping(value = "/{id}", produces = { "application/json" })
-    public ResponseEntity<User> getUser(@PathVariable Integer id) {
+    public ResponseEntity<User> getUser(@PathVariable Long id) {
         User user = service.searchById(id).orElseThrow(() -> new UserNotFoundException(id));
         return ResponseEntity.ok(user);
     }
@@ -58,7 +59,7 @@ public class UserController {
 
     // PUT user
     @PutMapping("/{id}")
-    public ResponseEntity<Void> replaceUser(@Valid @RequestBody User newUser, @PathVariable Integer id) {
+    public ResponseEntity<Void> replaceUser(@Valid @RequestBody User newUser, @PathVariable Long id) {
         service.searchById(id).map(User -> {
             User.setName(newUser.getName());
             User.setUsername(newUser.getUsername());
@@ -72,7 +73,7 @@ public class UserController {
 
     // DELETE user
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Integer id) {
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         if (service.existUserById(id)) {
             service.deleteUser(id);
         } else {

@@ -64,23 +64,28 @@ public class RfcService {
         rfc.getComments().add(comment);
         rfcRepository.save(rfc);        // saved also in the table comments thanks to cascade all
 
-        List<CommentResponse> commentResponses = rfc.getComments().stream()
-                .map(c -> new CommentResponse(
-                        c.getAuthor().getUsername(),
-                        c.getContent()
-                ))
-                .toList();
+    List<CommentResponse> commentResponses = rfc.getComments().stream()
+        .map(c -> new CommentResponse(
+            c.getAuthor().getUsername(),
+            c.getContent()
+        ))
+        .toList();
 
-        return new RfcResponse(
-                rfc.getId(),
-                rfc.getTitle(),
-                rfc.getDescription(),
-                rfc.getUser().getId(),
-                rfc.getTemplate().getId(),
-                rfc.getOrg().getId(),
-                rfc.getStatus(),
-                commentResponses
-        );
+    // Build full RfcResponse using the record constructor arguments order
+    return new RfcResponse(
+        rfc.getId(),
+        rfc.getTitle(),
+        rfc.getDescription(),
+        rfc.getUser() != null ? rfc.getUser().getId() : null,
+        rfc.getUser() != null ? rfc.getUser().getName() : null,
+        rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
+        rfc.getOrg() != null ? rfc.getOrg().getId() : null,
+        rfc.getStatus(),
+        rfc.getCreatedAt(),
+        rfc.getUpdatedAt(),
+        java.util.List.of(), // alternatives (lightweight here)
+        commentResponses
+    );
     }
 
     // ---------- US-12: Create RFC ----------
@@ -164,7 +169,10 @@ public class RfcService {
         .collect(Collectors.toList());
 
     List<CommentResponse> comments = commentRepository.findByRfcId(rfc.getId()).stream()
-        .map(CommentResponse::fromEntity)
+        .map(c -> new CommentResponse(
+            c.getAuthor() != null ? c.getAuthor().getUsername() : null,
+            c.getContent()
+        ))
         .collect(Collectors.toList());
 
     return new RfcResponse(

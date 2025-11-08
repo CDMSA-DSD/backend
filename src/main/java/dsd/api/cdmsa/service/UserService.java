@@ -33,7 +33,7 @@ public class UserService {
         throw new UserExistsException(user.getName());
     }
 
-    public Optional<User> searchById(int id) {
+    public Optional<User> searchById(Long id) {
         return repository.findById(id);
     }
 
@@ -41,11 +41,11 @@ public class UserService {
         return repository.findAll();
     }
 
-    public boolean existUserById(int id) {
+    public boolean existUserById(Long id) {
         return repository.existsById(id);
     }
 
-    public void deleteUser(int id) {
+    public void deleteUser(Long id) {
         repository.deleteById(id);
     }
 

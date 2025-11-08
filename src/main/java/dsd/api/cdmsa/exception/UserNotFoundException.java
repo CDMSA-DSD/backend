@@ -1,7 +1,7 @@
 package dsd.api.cdmsa.exception;
 
 public class UserNotFoundException extends RuntimeException{
-    public UserNotFoundException(Integer id){
+    public UserNotFoundException(Long id){
         super("User " + id + " not found.");
     }
     public UserNotFoundException(String name){

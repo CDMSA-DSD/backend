@@ -63,7 +63,7 @@ public class OrgService {
         throw new OrgExistsException(dto.getOrgName());
     }
 
-    public Optional<Organization> searchById(int id) {
+    public Optional<Organization> searchById(Long id) {
         return orgRepo.findById(id);
     }
 
@@ -71,11 +71,11 @@ public class OrgService {
         return orgRepo.findAll();
     }
 
-    public boolean existOrgById(int id) {
+    public boolean existOrgById(Long id) {
         return orgRepo.existsById(id);
     }
 
-    public void deleteOrg(int id) {
+    public void deleteOrg(Long id) {
         orgRepo.deleteById(id);
     }
 

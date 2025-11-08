@@ -2,7 +2,7 @@ package dsd.api.cdmsa.dto;
 
 import dsd.api.cdmsa.model.Comment;
 
-public record CommentResponse(
+public record CommentResponses(
         Long id,
         String content,
         Long authorId,
@@ -10,8 +10,8 @@ public record CommentResponse(
         java.time.Instant createdAt,
         java.time.Instant updatedAt) {
 
-    public static CommentResponse fromEntity(Comment c) {
-        return new CommentResponse(
+    public static CommentResponses fromEntity(Comment c) {
+        return new CommentResponses(
                 c.getId(),
                 c.getContent(),
                 c.getAuthor() != null ? c.getAuthor().getId() : null,
