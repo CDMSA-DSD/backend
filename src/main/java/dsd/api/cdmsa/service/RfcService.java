@@ -22,6 +22,9 @@ public class RfcService {
 
     @Transactional
     public RfcResponse postCommentToRfc(Long rfcId, Long userId, CreateCommentRequest request) {
+        // in the future we should check that the user must be a reviewer of the RFC in order to post a comment
+        // ...
+
         RFC rfc = rfcRepository.findById(rfcId)
                 .orElseThrow(() -> new RuntimeException("RFC not found"));
 
@@ -32,7 +35,7 @@ public class RfcService {
         comment.setRfc(rfc);
 
         rfc.getComments().add(comment);
-        rfcRepository.save(rfc); // save also in the table comments thanks to cascade
+        rfcRepository.save(rfc);        // saved also in the table comments thanks to cascade all
 
         List<CommentResponse> commentResponses = rfc.getComments().stream()
                 .map(c -> new CommentResponse(
