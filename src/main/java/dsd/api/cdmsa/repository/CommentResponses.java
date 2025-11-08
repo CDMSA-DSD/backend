@@ -1,4 +1,4 @@
-package dsd.api.cdmsa.dto;
+package dsd.api.cdmsa.repository;
 
 import dsd.api.cdmsa.model.Comment;
 

@@ -8,5 +8,7 @@ public record AdrResponse(
         String decision,
         String consequences,
         ADR.Status status,
-        Long rfcId) {
+        Long rfcId,
+        java.time.Instant createdAt,
+        java.time.Instant updatedAt) {
 }

@@ -40,9 +40,26 @@ public class ADR {
     @JoinColumn(name = "rfc_id", nullable = false, unique = true)
     private RFC rfc;
 
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private java.time.Instant createdAt;
+
+    @Column(name = "updated_at")
+    private java.time.Instant updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        java.time.Instant now = java.time.Instant.now();
+        this.createdAt = now;
+        this.updatedAt = now;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = java.time.Instant.now();
+    }
+
     public enum Status {
         DRAFT,
         APPROVED,
-        REJECTED,
     }
 }

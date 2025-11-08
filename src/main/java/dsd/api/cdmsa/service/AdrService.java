@@ -44,7 +44,9 @@ public class AdrService {
                 saved.getDecision(),
                 saved.getConsequences(),
                 saved.getStatus(),
-                saved.getRfc().getId()
+                saved.getRfc().getId(),
+                saved.getCreatedAt(),
+                saved.getUpdatedAt()
         );
     }
 
@@ -60,7 +62,9 @@ public class AdrService {
                 adr.getDecision(),
                 adr.getConsequences(),
                 adr.getStatus(),
-                adr.getRfc().getId()
+                adr.getRfc().getId(),
+                adr.getCreatedAt(),
+                adr.getUpdatedAt()
         );
     }
 
@@ -74,7 +78,9 @@ public class AdrService {
                         adr.getDecision(),
                         adr.getConsequences(),
                         adr.getStatus(),
-                        adr.getRfc().getId()
+                        adr.getRfc().getId(),
+                        adr.getCreatedAt(),
+                        adr.getUpdatedAt()
                 ));
     }
 
