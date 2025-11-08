@@ -8,7 +8,7 @@ import lombok.*;
 @Setter
 @NoArgsConstructor 
 @AllArgsConstructor 
-public class UserRFCID {
+public class UserRFCId {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
