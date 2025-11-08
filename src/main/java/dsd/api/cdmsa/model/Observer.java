@@ -12,7 +12,7 @@ import lombok.*;
 public class Observer {
     
     @EmbeddedId
-    private UserRFCID id = new UserRFCID();
+    private UserRFCId id = new UserRFCId();
 
     @ManyToOne (optional = false)
     @MapsId("userId")
