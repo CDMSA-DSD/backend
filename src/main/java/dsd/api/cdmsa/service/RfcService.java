@@ -1,5 +1,8 @@
 package dsd.api.cdmsa.service;
 
+import dsd.api.cdmsa.dto.CreateCommentRequest;
+import dsd.api.cdmsa.model.Comment;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,7 +37,6 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class RfcService {
-
     // Existing repositories
     private final RfcRepository rfcRepository;
     private final UserRepository userRepository;
@@ -44,6 +46,47 @@ public class RfcService {
     private final CommentRepository commentRepository;
 
     private final AdrService adrService;
+
+    @Transactional
+    public RfcResponse postCommentToRfc(Long rfcId, Long userId, CreateCommentRequest request) {
+        // in the future we should check that the user must be a reviewer of the RFC in order to post a comment
+        // ...
+
+        RFC rfc = rfcRepository.findById(rfcId)
+                .orElseThrow(() -> new RuntimeException("RFC not found"));
+
+        Comment comment = new Comment();
+        comment.setAuthor(userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found")));
+        comment.setContent(request.content().trim());
+        comment.setRfc(rfc);
+
+        rfc.getComments().add(comment);
+        rfcRepository.save(rfc);        // saved also in the table comments thanks to cascade all
+
+    List<CommentResponse> commentResponses = rfc.getComments().stream()
+        .map(c -> new CommentResponse(
+            c.getAuthor().getUsername(),
+            c.getContent()
+        ))
+        .toList();
+
+    // Build full RfcResponse using the record constructor arguments order
+    return new RfcResponse(
+        rfc.getId(),
+        rfc.getTitle(),
+        rfc.getDescription(),
+        rfc.getUser() != null ? rfc.getUser().getId() : null,
+        rfc.getUser() != null ? rfc.getUser().getName() : null,
+        rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
+        rfc.getOrg() != null ? rfc.getOrg().getId() : null,
+        rfc.getStatus(),
+        rfc.getCreatedAt(),
+        rfc.getUpdatedAt(),
+        java.util.List.of(), // alternatives (lightweight here)
+        commentResponses
+    );
+    }
 
     // ---------- US-12: Create RFC ----------
 
@@ -126,7 +169,10 @@ public class RfcService {
         .collect(Collectors.toList());
 
     List<CommentResponse> comments = commentRepository.findByRfcId(rfc.getId()).stream()
-        .map(CommentResponse::fromEntity)
+        .map(c -> new CommentResponse(
+            c.getAuthor() != null ? c.getAuthor().getUsername() : null,
+            c.getContent()
+        ))
         .collect(Collectors.toList());
 
     return new RfcResponse(

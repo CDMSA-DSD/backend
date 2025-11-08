@@ -16,6 +16,7 @@ import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 
 @RestController
+@CrossOrigin(origins = "*")
 @RequestMapping("/orgs")
 @AllArgsConstructor
 public class OrgController {
@@ -34,7 +35,7 @@ public class OrgController {
 
     // GET Org (individual)
     @GetMapping(value = "/{id}", produces = { "application/json" })
-    public ResponseEntity<Organization> getOrg(@PathVariable Integer id) {
+    public ResponseEntity<Organization> getOrg(@PathVariable Long id) {
         Organization org = service.searchById(id).orElseThrow(() -> new OrgNotFoundException(id));
         return ResponseEntity.ok(org);
     }
@@ -48,7 +49,7 @@ public class OrgController {
 
     // DELETE Org
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteOrg(@PathVariable Integer id) {
+    public ResponseEntity<Void> deleteOrg(@PathVariable Long id) {
         if (service.existOrgById(id)) {
             service.deleteOrg(id);
         } else {
