@@ -11,4 +11,34 @@ spring:
         format_sql: true
 logging:
   level:
-    org.hibernate.SQL: warn
+    org.hibernate.SQL: 
+    
+
+# --------------------- CHATGPT RECOMMENDATIONS FOR THIS FILE -----------------------------------
+
+# server:
+  #port: 8080
+
+#spring:
+ ## datasource:
+  #  url: jdbc:mariadb://localhost:3306/cdmsa?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=UTC
+    #username: cdmsa
+   # password: cdmsa
+ # jpa:
+  #  open-in-view: false
+   # hibernate:
+    #  ddl-auto: update            
+    #properties:
+     # hibernate:
+      #  dialect: org.hibernate.dialect.MariaDBDialect
+       # format_sql: true
+  #jackson:
+   # serialization:
+    #  WRITE_DATES_AS_TIMESTAMPS: false   # ISO-8601 en JSON
+
+#logging:
+#  level:
+ #   org.hibernate.SQL: debug         # ver las queries en dev
+  #  org.hibernate.type: warn
+
+    

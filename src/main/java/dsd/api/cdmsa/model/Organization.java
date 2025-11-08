@@ -18,7 +18,7 @@ import lombok.*;
 public class Organization {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    private Long id;
 
     @NotBlank(message = "Name is mandatory")
     @Column(nullable = false)
