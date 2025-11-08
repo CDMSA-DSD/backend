@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 import dsd.api.cdmsa.dto.AlternativeResponse;
 import dsd.api.cdmsa.dto.CloseRfcRequest;
@@ -28,6 +29,7 @@ import lombok.RequiredArgsConstructor;
  * Exposes operations for creating and listing RFCs (US-12).
  */
 @RestController
+@CrossOrigin(origins = "*")
 @RequestMapping("/rfcs")
 @RequiredArgsConstructor
 public class RfcController {
@@ -74,6 +76,16 @@ public class RfcController {
     public Page<RfcResponse> listRfcs(
             @PageableDefault(size = 20) Pageable pageable) {
         return rfcService.listRfcs(pageable);
+    }
+
+    /**
+     * Returns a specific RFC by its ID.
+     */
+    @GetMapping("/{rfcId}")
+    public ResponseEntity<RfcResponse> getRfcById(
+            @PathVariable Long rfcId) {
+        RfcResponse response = rfcService.getRfcById(rfcId);
+        return ResponseEntity.ok(response);
     }
 
     // ---------- Create Alternative ----------

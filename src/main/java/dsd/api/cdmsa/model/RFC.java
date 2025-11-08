@@ -12,6 +12,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -65,6 +67,24 @@ public class RFC {
 
     @OneToMany(mappedBy = "rfc", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.Set<Alternative> alternatives = new java.util.HashSet<>();
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private java.time.Instant createdAt;
+
+    @Column(name = "updated_at")
+    private java.time.Instant updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        java.time.Instant now = java.time.Instant.now();
+        this.createdAt = now;
+        this.updatedAt = now;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = java.time.Instant.now();
+    }
 
     public enum Status {
         UNDER_REVIEW, // active RFC on review status

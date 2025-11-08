@@ -1,6 +1,7 @@
 package dsd.api.cdmsa.service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import dsd.api.cdmsa.dto.AlternativeResponse;
+import dsd.api.cdmsa.dto.CommentResponse;
 import dsd.api.cdmsa.dto.CloseRfcRequest;
 import dsd.api.cdmsa.dto.CreateAlternativeRequest;
 import dsd.api.cdmsa.dto.CreateRfcRequest;
@@ -22,6 +24,7 @@ import dsd.api.cdmsa.model.ADR;
 import dsd.api.cdmsa.model.Alternative;
 import dsd.api.cdmsa.model.RFC;
 import dsd.api.cdmsa.repository.AlternativeRepository;
+import dsd.api.cdmsa.repository.CommentRepository;
 import dsd.api.cdmsa.repository.OrganizationRepository;
 import dsd.api.cdmsa.repository.RfcRepository;
 import dsd.api.cdmsa.repository.TemplateRepository;
@@ -38,6 +41,7 @@ public class RfcService {
     private final TemplateRepository templateRepository;
     private final OrganizationRepository organizationRepository;
     private final AlternativeRepository alternativeRepository;
+    private final CommentRepository commentRepository;
 
     private final AdrService adrService;
 
@@ -93,15 +97,51 @@ public class RfcService {
                 .map(this::toResponse);
     }
 
+    @Transactional(readOnly = true)
+    public RfcResponse getRfcById(Long rfcId) {
+        RFC rfc = rfcRepository.findById(rfcId)
+                .orElseThrow(() -> new RfcNotFoundException("RFC not found with id " + rfcId));
+    return toDetailedResponse(rfc);
+    }
+
     private RfcResponse toResponse(RFC rfc) {
-        return new RfcResponse(
-                rfc.getId(),
-                rfc.getTitle(),
-                rfc.getDescription(),
-                rfc.getUser().getId(),
-                rfc.getTemplate().getId(),
-                rfc.getOrg().getId(),
-                rfc.getStatus());
+    return new RfcResponse(
+        rfc.getId(),
+        rfc.getTitle(),
+        rfc.getDescription(),
+        rfc.getUser() != null ? rfc.getUser().getId() : null,
+        rfc.getUser() != null ? rfc.getUser().getName() : null,
+        rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
+        rfc.getOrg() != null ? rfc.getOrg().getId() : null,
+        rfc.getStatus(),
+        rfc.getCreatedAt(),
+        rfc.getUpdatedAt(),
+        java.util.List.of(), // lightweight list for summary
+        java.util.List.of());
+    }
+
+    private RfcResponse toDetailedResponse(RFC rfc) {
+    List<AlternativeResponse> alts = alternativeRepository.findByRfcId(rfc.getId()).stream()
+        .map(AlternativeResponse::fromEntity)
+        .collect(Collectors.toList());
+
+    List<CommentResponse> comments = commentRepository.findByRfcId(rfc.getId()).stream()
+        .map(CommentResponse::fromEntity)
+        .collect(Collectors.toList());
+
+    return new RfcResponse(
+        rfc.getId(),
+        rfc.getTitle(),
+        rfc.getDescription(),
+        rfc.getUser() != null ? rfc.getUser().getId() : null,
+        rfc.getUser() != null ? rfc.getUser().getName() : null,
+        rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
+        rfc.getOrg() != null ? rfc.getOrg().getId() : null,
+        rfc.getStatus(),
+        rfc.getCreatedAt(),
+        rfc.getUpdatedAt(),
+        alts,
+        comments);
     }
 
     // ---------- Alternatives (POST & GET) ----------
@@ -162,6 +202,10 @@ public class RfcService {
         alternative.setCons(request.cons());
 
         Alternative saved = alternativeRepository.save(alternative);
+        // Update RFC updated timestamp to reflect new alternative
+        rfc.setUpdatedAt(java.time.Instant.now());
+        rfcRepository.save(rfc);
+
         return AlternativeResponse.fromEntity(saved);
     }
 
