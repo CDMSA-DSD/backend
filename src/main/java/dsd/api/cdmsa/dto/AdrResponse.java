@@ -3,6 +3,7 @@ package dsd.api.cdmsa.dto;
 import dsd.api.cdmsa.model.ADR;
 
 public record AdrResponse(
+        Long id,
         String title,
         String context,
         String decision,

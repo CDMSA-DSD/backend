@@ -61,6 +61,16 @@ public class AdrController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    // Update an existing ADR (title, context, decision, consequences, status)
+    @PutMapping("/{id}")
+    public ResponseEntity<AdrResponse> updateAdr(@PathVariable Long id,
+                                                 @Valid @RequestBody dsd.api.cdmsa.dto.UpdateAdrRequest request,
+                                                 HttpServletRequest httpRequest) {
+        Long userId = getCurrentUserId(httpRequest);
+        AdrResponse response = adrService.updateAdr(id, request);
+        return ResponseEntity.ok(response);
+    }
+
 
     @GetMapping
     public Page<AdrResponse> listAdrs(

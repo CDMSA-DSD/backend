@@ -2,6 +2,7 @@ package dsd.api.cdmsa.service;
 
 import dsd.api.cdmsa.dto.AdrResponse;
 import dsd.api.cdmsa.dto.CreateAdrRequest;
+import dsd.api.cdmsa.dto.UpdateAdrRequest;
 import dsd.api.cdmsa.model.ADR;
 import dsd.api.cdmsa.model.RFC;
 import dsd.api.cdmsa.model.Alternative;
@@ -39,6 +40,7 @@ public class AdrService {
         ADR saved = adrRepository.save(adr);
 
         return new AdrResponse(
+                saved.getId(),
                 saved.getTitle(),
                 saved.getContext(),
                 saved.getDecision(),
@@ -57,6 +59,7 @@ public class AdrService {
                 .orElseThrow(() -> new EntityNotFoundException("RFC not found with id " + id));
 
         return new AdrResponse(
+                adr.getId(),
                 adr.getTitle(),
                 adr.getContext(),
                 adr.getDecision(),
@@ -73,6 +76,7 @@ public class AdrService {
     public Page<AdrResponse> listAdrs(Pageable pageable) {
         return adrRepository.findAll(pageable)
                 .map(adr -> new AdrResponse(
+                        adr.getId(),
                         adr.getTitle(),
                         adr.getContext(),
                         adr.getDecision(),
@@ -94,6 +98,32 @@ public class AdrService {
             adr.setDecision("Selected alternative: " + (alternative != null ? alternative.getTitle() : ""));
             adr.setConsequences("");
             return adrRepository.save(adr);
+    }
+
+    @Transactional
+    public AdrResponse updateAdr(Long id, UpdateAdrRequest request) {
+        ADR adr = adrRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("ADR not found with id " + id));
+
+        adr.setTitle(request.title() != null ? request.title().trim() : null);
+        adr.setContext(request.context() != null ? request.context().trim() : null);
+        adr.setDecision(request.decision() != null ? request.decision().trim() : null);
+        adr.setConsequences(request.consequences() != null ? request.consequences().trim() : null);
+        adr.setStatus(request.status());
+
+        ADR saved = adrRepository.save(adr);
+
+        return new AdrResponse(
+                saved.getId(),
+                saved.getTitle(),
+                saved.getContext(),
+                saved.getDecision(),
+                saved.getConsequences(),
+                saved.getStatus(),
+                saved.getRfc().getId(),
+                saved.getCreatedAt(),
+                saved.getUpdatedAt()
+        );
     }
 }
 
