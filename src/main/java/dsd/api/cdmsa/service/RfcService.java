@@ -66,8 +66,12 @@ public class RfcService {
 
     List<CommentResponse> commentResponses = rfc.getComments().stream()
         .map(c -> new CommentResponse(
-            c.getAuthor().getUsername(),
-            c.getContent()
+            c.getId(),
+            c.getAuthor() != null ? c.getAuthor().getId() : null,
+            c.getAuthor() != null ? c.getAuthor().getUsername() : null,
+            c.getContent(),
+            c.getCreatedAt(),
+            c.getUpdatedAt()
         ))
         .toList();
 
@@ -170,8 +174,12 @@ public class RfcService {
 
     List<CommentResponse> comments = commentRepository.findByRfcId(rfc.getId()).stream()
         .map(c -> new CommentResponse(
+            c.getId(),
+            c.getAuthor() != null ? c.getAuthor().getId() : null,
             c.getAuthor() != null ? c.getAuthor().getUsername() : null,
-            c.getContent()
+            c.getContent(),
+            c.getCreatedAt(),
+            c.getUpdatedAt()
         ))
         .collect(Collectors.toList());
 
@@ -302,8 +310,8 @@ public class RfcService {
             // rfc.setWinningAlternative(winningAlt); // si tienes este campo
 
             // Create ADR draft (using AdrService)
-            ADR adr = adrService.createDraftFromRfcAndAlternative(rfc, winningAlt);
-            rfc.setAdr(adr);
+            // ADR adr = adrService.createDraftFromRfcAndAlternative(rfc, winningAlt);
+            // rfc.setAdr(adr);
         }
         // Case 2: closed without alternative (US-23)
         else {
