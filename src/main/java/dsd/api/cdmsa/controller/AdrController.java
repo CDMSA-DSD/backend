@@ -44,9 +44,9 @@ public class AdrController {
         // TO DO - check if user is logged in ...
         Long userId = getCurrentUserId(httpRequest);
 
-        AdrResponse response = adrService.createAdr(request);
         // build the markdown file from form, push it on GitHub through API, store it in the db (the url)
-        // ...
+        AdrResponse response = adrService.createAdr(request, userId);
+
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -67,7 +67,7 @@ public class AdrController {
                                                  @Valid @RequestBody dsd.api.cdmsa.dto.UpdateAdrRequest request,
                                                  HttpServletRequest httpRequest) {
         Long userId = getCurrentUserId(httpRequest);
-        AdrResponse response = adrService.updateAdr(id, request);
+        AdrResponse response = adrService.updateAdr(id, request, userId);
         return ResponseEntity.ok(response);
     }
 
