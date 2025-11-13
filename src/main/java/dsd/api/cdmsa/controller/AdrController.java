@@ -2,6 +2,7 @@ package dsd.api.cdmsa.controller;
 
 import dsd.api.cdmsa.dto.AdrResponse;
 import dsd.api.cdmsa.dto.CreateAdrRequest;
+import dsd.api.cdmsa.dto.PublishAdrRequest;
 import dsd.api.cdmsa.service.AdrService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -44,10 +45,9 @@ public class AdrController {
         // TO DO - check if user is logged in ...
         Long userId = getCurrentUserId(httpRequest);
 
-        // build the markdown file from form, push it on GitHub through API, store it in the db (the url)
         AdrResponse response = adrService.createAdr(request, userId);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.ok(response);
     }
 
 
@@ -76,6 +76,17 @@ public class AdrController {
     public Page<AdrResponse> listAdrs(
             @PageableDefault(size = 20) Pageable pageable) {
         return adrService.listAdrs(pageable);
+    }
+
+    @PostMapping("/publish")
+    public ResponseEntity<AdrResponse> publishAdr(@Valid @RequestBody PublishAdrRequest request, HttpServletRequest httpRequest) {
+        // TO DO - check if user is logged in ...
+        Long userId = getCurrentUserId(httpRequest);
+
+        // build the markdown file from form, push it on GitHub through API, store it in the db (the url)
+        AdrResponse response = adrService.publishAdr(request, userId);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     /* it is necessary?

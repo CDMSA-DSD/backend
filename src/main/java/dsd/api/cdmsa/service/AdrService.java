@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dsd.api.cdmsa.dto.AdrResponse;
 import dsd.api.cdmsa.dto.CreateAdrRequest;
+import dsd.api.cdmsa.dto.PublishAdrRequest;
 import dsd.api.cdmsa.dto.UpdateAdrRequest;
 import dsd.api.cdmsa.model.*;
 import dsd.api.cdmsa.repository.AdrRepository;
@@ -16,7 +17,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.nio.charset.StandardCharsets;
@@ -41,19 +41,17 @@ public class AdrService {
         RFC rfc = rfcRepository.findById(request.rfcId())
                 .orElseThrow(() -> new EntityNotFoundException("RFC not found with id " + request.rfcId()));
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        Organization org = user.getOrg();
 
         ADR adr = new ADR();
         adr.setTitle(request.title().trim());
         adr.setContext(request.context().trim());
         adr.setDecision(request.decision().trim());
-        adr.setConsequences(request.consequences().trim());				// from this create markdown file, generate and store the url of GitHub in the db
+        adr.setConsequences(request.consequences().trim());
         adr.setStatus(request.status());
         adr.setRfc(rfc);
         ADR saved = adrRepository.save(adr);
 
+        /*
         String markdown = buildMarkdown(saved);
 
         // push the markdown on github
@@ -68,7 +66,7 @@ public class AdrService {
         // save url in the db
         saved.setGitHubUrl(githubUrl);
         saved = adrRepository.save(saved);
-
+        */
 
         return new AdrResponse(
                 saved.getId(),
@@ -80,7 +78,7 @@ public class AdrService {
                 saved.getRfc().getId(),
                 saved.getCreatedAt(),
                 saved.getUpdatedAt(),
-                saved.getGitHubUrl()
+                saved.getGitHubUrl()        // null here
         );
     }
 
@@ -100,7 +98,7 @@ public class AdrService {
                 adr.getRfc().getId(),
                 adr.getCreatedAt(),
                 adr.getUpdatedAt(),
-                adr.getGitHubUrl()
+                adr.getGitHubUrl()          // null until i approve the adr
         );
     }
 
@@ -147,6 +145,7 @@ public class AdrService {
 
         ADR saved = adrRepository.save(adr);
 
+        /*
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
         Organization org = user.getOrg();
@@ -160,6 +159,8 @@ public class AdrService {
             throw new RuntimeException("Failed to update ADR on GitHub", e);
         }
 
+         */
+
         return new AdrResponse(
                 saved.getId(),
                 saved.getTitle(),
@@ -171,6 +172,44 @@ public class AdrService {
                 saved.getCreatedAt(),
                 saved.getUpdatedAt(),
                 saved.getGitHubUrl()
+        );
+    }
+
+    public AdrResponse publishAdr(PublishAdrRequest request, Long userId){
+        ADR adr = adrRepository.findById(request.adrId())
+                .orElseThrow(() -> new EntityNotFoundException("ADR not found with id " + request.adrId()));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        Organization org = user.getOrg();
+
+        String markdown = buildMarkdown(adr);
+
+        // push the markdown on github
+        String filePath = "adr-" + adr.getId() + ".md";
+        String githubUrl;
+        try {
+            githubUrl = pushMarkdownToGitHub(markdown, filePath, org, adr.getTitle());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to push ADR to GitHub", e);
+        }
+
+        // save url in the db
+        adr.setGitHubUrl(githubUrl);
+        adr = adrRepository.save(adr);
+
+
+        return new AdrResponse(
+                adr.getId(),
+                adr.getTitle(),
+                adr.getContext(),
+                adr.getDecision(),
+                adr.getConsequences(),
+                adr.getStatus(),
+                adr.getRfc().getId(),
+                adr.getCreatedAt(),
+                adr.getUpdatedAt(),
+                adr.getGitHubUrl()
         );
     }
 
@@ -226,7 +265,7 @@ public class AdrService {
 
         HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(requestBody, headers);
 
-        // Effettua la richiesta PUT
+        // do the put
         RestTemplate restTemplate = new RestTemplate();
         ResponseEntity<String> response = restTemplate.exchange(
                 url,
@@ -240,13 +279,13 @@ public class AdrService {
                     + " - " + response.getBody());
         }
 
-        // Parsing della risposta
+        // Parsing
         JsonNode rootNode = objectMapper.readTree(response.getBody());
         return rootNode.get("content").get("html_url").asText();
 
     }
 
-
+    /*
     // update a .md file already existing
     private void updateMarkdownOnGitHub(String markdownContent, String filePath,
                                         Organization org, String title) throws Exception {
@@ -258,7 +297,7 @@ public class AdrService {
 
         String url = "https://api.github.com/repos/" + repoOwner + "/" + repoName + "/contents/" + filePath + "?ref=" + branchName;
 
-
+        // check the sha
         String sha = getFileSha(url, token);
         if (sha == null) {
             throw new RuntimeException("Cannot update file: file not found on GitHub");
@@ -267,14 +306,14 @@ public class AdrService {
         String contentBase64 = Base64.getEncoder().encodeToString(
                 markdownContent.getBytes(StandardCharsets.UTF_8));
 
-        // Crea il body della richiesta
+        // request body
         Map<String, String> requestBody = new HashMap<>();
         requestBody.put("message", "Updated ADR - " + title);
         requestBody.put("content", contentBase64);
         requestBody.put("sha", sha);
         requestBody.put("branch", branchName);
 
-        // Configura gli headers
+        // headers
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + token);
         headers.set("Accept", "application/vnd.github.v3+json");
@@ -282,7 +321,7 @@ public class AdrService {
 
         HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(requestBody, headers);
 
-        // Effettua la richiesta PUT
+        // do the put
         RestTemplate restTemplate = new RestTemplate();
         ResponseEntity<String> response = restTemplate.exchange(
                 url,
@@ -305,7 +344,7 @@ public class AdrService {
 
         HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
-        // Effettua la richiesta GET
+        // do the get
         RestTemplate restTemplate = new RestTemplate();
 
         try {
@@ -329,5 +368,7 @@ public class AdrService {
 
         return null;
     }
+
+     */
 }
 
