@@ -256,7 +256,8 @@ public class AdrService {
         String repoName = org.getSelectedRepoName();
         String branchName = org.getSelectedBranchName();
 
-        String url = "https://api.github.com/repos/" + repoOwner + "/" + repoName + "/contents/" + filePath;
+        String url = "https://api.github.com/repos/" + repoOwner + "/" + repoName + "/contents/" + filePath + "?ref=" + branchName;
+
 
         String sha = getFileSha(url, token);
         if (sha == null) {
@@ -300,7 +301,7 @@ public class AdrService {
     private String getFileSha(String url, String token) throws Exception {
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + token);
-        headers.set("Accept", "application/vnd.github+json");
+        headers.set("Accept", "application/vnd.github.v3+json");
 
         HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
