@@ -78,19 +78,7 @@ public class AdrController {
         return adrService.listAdrs(pageable);
     }
 
-    /* it is necessary?
 
-    public ADR createDraftFromRfcAndAlternative(RFC rfc, Alternative alternative) {
-        ADR adr = new ADR();
-        adr.setRfc(rfc);
-        adr.setStatus(ADR.Status.DRAFT);
-        adr.setTitle("ADR for RFC #" + rfc.getId() + ": " + rfc.getTitle());
-        adr.setContext(rfc.getDescription());
-        adr.setDecision("Selected alternative: " + alternative.getTitle());
-        return adrRepository.save(adr);
-    }
-
-     */
 
 
 }

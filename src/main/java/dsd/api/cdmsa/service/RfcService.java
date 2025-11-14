@@ -45,7 +45,7 @@ public class RfcService {
     private final AlternativeRepository alternativeRepository;
     private final CommentRepository commentRepository;
 
-    private final AdrService adrService;
+    private final LLMService llmService;
 
     @Transactional
     public RfcResponse postCommentToRfc(Long rfcId, Long userId, CreateCommentRequest request) {
@@ -307,11 +307,11 @@ public class RfcService {
 
             rfc.setStatus(RFC.Status.CLOSED_DECIDED);
             // Link winning alternative
-            // rfc.setWinningAlternative(winningAlt); // si tienes este campo
+            // rfc.setWinningAlternative(winningAlt); // maybe needed?
 
-            // Create ADR draft (using AdrService)
-            // ADR adr = adrService.createDraftFromRfcAndAlternative(rfc, winningAlt);
-            // rfc.setAdr(adr);
+            // Create ADR draft (using LLMService)
+            ADR adr = llmService.createDraftFromRfcAndAlternative(rfc, winningAlt);
+            rfc.setAdr(adr);
         }
         // Case 2: closed without alternative (US-23)
         else {

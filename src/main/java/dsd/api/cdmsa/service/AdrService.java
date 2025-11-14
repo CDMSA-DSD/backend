@@ -5,7 +5,6 @@ import dsd.api.cdmsa.dto.CreateAdrRequest;
 import dsd.api.cdmsa.dto.UpdateAdrRequest;
 import dsd.api.cdmsa.model.ADR;
 import dsd.api.cdmsa.model.RFC;
-import dsd.api.cdmsa.model.Alternative;
 import dsd.api.cdmsa.repository.AdrRepository;
 import dsd.api.cdmsa.repository.RfcRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -88,17 +87,6 @@ public class AdrService {
                 ));
     }
 
-    @Transactional
-    public ADR createDraftFromRfcAndAlternative(RFC rfc, Alternative alternative) {
-            ADR adr = new ADR();
-            adr.setRfc(rfc);
-            adr.setStatus(ADR.Status.DRAFT);
-            adr.setTitle("ADR for RFC #" + rfc.getId() + ": " + rfc.getTitle());
-            adr.setContext(rfc.getDescription() != null ? rfc.getDescription() : "");
-            adr.setDecision("Selected alternative: " + (alternative != null ? alternative.getTitle() : ""));
-            adr.setConsequences("");
-            return adrRepository.save(adr);
-    }
 
     @Transactional
     public AdrResponse updateAdr(Long id, UpdateAdrRequest request) {
