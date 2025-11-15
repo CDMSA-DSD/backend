@@ -1,8 +1,5 @@
 package dsd.api.cdmsa.service;
 
-import dsd.api.cdmsa.dto.CreateCommentRequest;
-import dsd.api.cdmsa.model.Comment;
-
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -12,9 +9,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import dsd.api.cdmsa.dto.AlternativeResponse;
-import dsd.api.cdmsa.dto.CommentResponse;
 import dsd.api.cdmsa.dto.CloseRfcRequest;
+import dsd.api.cdmsa.dto.CommentResponse;
 import dsd.api.cdmsa.dto.CreateAlternativeRequest;
+import dsd.api.cdmsa.dto.CreateCommentRequest;
 import dsd.api.cdmsa.dto.CreateRfcRequest;
 import dsd.api.cdmsa.dto.RfcResponse;
 import dsd.api.cdmsa.exception.RfcAlternativeBadRequestException;
@@ -23,8 +21,8 @@ import dsd.api.cdmsa.exception.RfcBadRequestException;
 import dsd.api.cdmsa.exception.RfcDependencyNotFoundException;
 import dsd.api.cdmsa.exception.RfcInvalidStatusException;
 import dsd.api.cdmsa.exception.RfcNotFoundException;
-import dsd.api.cdmsa.model.ADR;
 import dsd.api.cdmsa.model.Alternative;
+import dsd.api.cdmsa.model.Comment;
 import dsd.api.cdmsa.model.RFC;
 import dsd.api.cdmsa.repository.AlternativeRepository;
 import dsd.api.cdmsa.repository.CommentRepository;
@@ -49,7 +47,8 @@ public class RfcService {
 
     @Transactional
     public RfcResponse postCommentToRfc(Long rfcId, Long userId, CreateCommentRequest request) {
-        // in the future we should check that the user must be a reviewer of the RFC in order to post a comment
+        // in the future we should check that the user must be a reviewer of the RFC in
+        // order to post a comment
         // ...
 
         RFC rfc = rfcRepository.findById(rfcId)
@@ -62,34 +61,32 @@ public class RfcService {
         comment.setRfc(rfc);
 
         rfc.getComments().add(comment);
-        rfcRepository.save(rfc);        // saved also in the table comments thanks to cascade all
+        rfcRepository.save(rfc); // saved also in the table comments thanks to cascade all
 
-    List<CommentResponse> commentResponses = rfc.getComments().stream()
-        .map(c -> new CommentResponse(
-            c.getId(),
-            c.getAuthor() != null ? c.getAuthor().getId() : null,
-            c.getAuthor() != null ? c.getAuthor().getUsername() : null,
-            c.getContent(),
-            c.getCreatedAt(),
-            c.getUpdatedAt()
-        ))
-        .toList();
+        List<CommentResponse> commentResponses = rfc.getComments().stream()
+                .map(c -> new CommentResponse(
+                        c.getId(),
+                        c.getAuthor() != null ? c.getAuthor().getId() : null,
+                        c.getAuthor() != null ? c.getAuthor().getUsername() : null,
+                        c.getContent(),
+                        c.getCreatedAt(),
+                        c.getUpdatedAt()))
+                .toList();
 
-    // Build full RfcResponse using the record constructor arguments order
-    return new RfcResponse(
-        rfc.getId(),
-        rfc.getTitle(),
-        rfc.getDescription(),
-        rfc.getUser() != null ? rfc.getUser().getId() : null,
-        rfc.getUser() != null ? rfc.getUser().getName() : null,
-        rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
-        rfc.getOrg() != null ? rfc.getOrg().getId() : null,
-        rfc.getStatus(),
-        rfc.getCreatedAt(),
-        rfc.getUpdatedAt(),
-        java.util.List.of(), // alternatives (lightweight here)
-        commentResponses
-    );
+        // Build full RfcResponse using the record constructor arguments order
+        return new RfcResponse(
+                rfc.getId(),
+                rfc.getTitle(),
+                rfc.getDescription(),
+                rfc.getUser() != null ? rfc.getUser().getId() : null,
+                rfc.getUser() != null ? rfc.getUser().getName() : null,
+                rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
+                rfc.getOrg() != null ? rfc.getOrg().getId() : null,
+                rfc.getStatus(),
+                rfc.getCreatedAt(),
+                rfc.getUpdatedAt(),
+                java.util.List.of(), // alternatives (lightweight here)
+                commentResponses);
     }
 
     // ---------- US-12: Create RFC ----------
@@ -148,72 +145,57 @@ public class RfcService {
     public RfcResponse getRfcById(Long rfcId) {
         RFC rfc = rfcRepository.findById(rfcId)
                 .orElseThrow(() -> new RfcNotFoundException("RFC not found with id " + rfcId));
-    return toDetailedResponse(rfc);
+        return toDetailedResponse(rfc);
     }
 
     private RfcResponse toResponse(RFC rfc) {
-    return new RfcResponse(
-        rfc.getId(),
-        rfc.getTitle(),
-        rfc.getDescription(),
-        rfc.getUser() != null ? rfc.getUser().getId() : null,
-        rfc.getUser() != null ? rfc.getUser().getName() : null,
-        rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
-        rfc.getOrg() != null ? rfc.getOrg().getId() : null,
-        rfc.getStatus(),
-        rfc.getCreatedAt(),
-        rfc.getUpdatedAt(),
-        java.util.List.of(), // lightweight list for summary
-        java.util.List.of());
+        return new RfcResponse(
+                rfc.getId(),
+                rfc.getTitle(),
+                rfc.getDescription(),
+                rfc.getUser() != null ? rfc.getUser().getId() : null,
+                rfc.getUser() != null ? rfc.getUser().getName() : null,
+                rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
+                rfc.getOrg() != null ? rfc.getOrg().getId() : null,
+                rfc.getStatus(),
+                rfc.getCreatedAt(),
+                rfc.getUpdatedAt(),
+                java.util.List.of(), // lightweight list for summary
+                java.util.List.of());
     }
 
     private RfcResponse toDetailedResponse(RFC rfc) {
-    List<AlternativeResponse> alts = alternativeRepository.findByRfcId(rfc.getId()).stream()
-        .map(AlternativeResponse::fromEntity)
-        .collect(Collectors.toList());
+        List<AlternativeResponse> alts = alternativeRepository.findByRfcId(rfc.getId()).stream()
+                .map(AlternativeResponse::fromEntity)
+                .collect(Collectors.toList());
 
-    List<CommentResponse> comments = commentRepository.findByRfcId(rfc.getId()).stream()
-        .map(c -> new CommentResponse(
-            c.getId(),
-            c.getAuthor() != null ? c.getAuthor().getId() : null,
-            c.getAuthor() != null ? c.getAuthor().getUsername() : null,
-            c.getContent(),
-            c.getCreatedAt(),
-            c.getUpdatedAt()
-        ))
-        .collect(Collectors.toList());
+        List<CommentResponse> comments = commentRepository.findByRfcId(rfc.getId()).stream()
+                .map(c -> new CommentResponse(
+                        c.getId(),
+                        c.getAuthor() != null ? c.getAuthor().getId() : null,
+                        c.getAuthor() != null ? c.getAuthor().getUsername() : null,
+                        c.getContent(),
+                        c.getCreatedAt(),
+                        c.getUpdatedAt()))
+                .collect(Collectors.toList());
 
-    return new RfcResponse(
-        rfc.getId(),
-        rfc.getTitle(),
-        rfc.getDescription(),
-        rfc.getUser() != null ? rfc.getUser().getId() : null,
-        rfc.getUser() != null ? rfc.getUser().getName() : null,
-        rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
-        rfc.getOrg() != null ? rfc.getOrg().getId() : null,
-        rfc.getStatus(),
-        rfc.getCreatedAt(),
-        rfc.getUpdatedAt(),
-        alts,
-        comments);
+        return new RfcResponse(
+                rfc.getId(),
+                rfc.getTitle(),
+                rfc.getDescription(),
+                rfc.getUser() != null ? rfc.getUser().getId() : null,
+                rfc.getUser() != null ? rfc.getUser().getName() : null,
+                rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
+                rfc.getOrg() != null ? rfc.getOrg().getId() : null,
+                rfc.getStatus(),
+                rfc.getCreatedAt(),
+                rfc.getUpdatedAt(),
+                alts,
+                comments);
     }
 
     // ---------- Alternatives (POST & GET) ----------
 
-    /**
-     * Creates a new alternative for a given RFC.
-     *
-     * Rules:
-     * - RFC must exist.
-     * - RFC must be in UNDER_REVIEW status.
-     * - Only the RFC author is allowed to create alternatives.
-     * - title and description are required.
-     *
-     * @param rfcId   ID of the target RFC
-     * @param userId  ID of the current user (author candidate)
-     * @param request Alternative creation payload
-     * @return AlternativeResponse DTO
-     */
     @Transactional
     public AlternativeResponse addAlternative(Long rfcId, Long userId, CreateAlternativeRequest request) {
 
@@ -263,12 +245,6 @@ public class RfcService {
         return AlternativeResponse.fromEntity(saved);
     }
 
-    /**
-     * Returns all alternatives for a given RFC.
-     *
-     * @param rfcId ID of the RFC
-     * @return List of AlternativeResponse
-     */
     @Transactional(readOnly = true)
     public List<AlternativeResponse> listAlternatives(Long rfcId) {
 
@@ -307,16 +283,15 @@ public class RfcService {
 
             rfc.setStatus(RFC.Status.CLOSED_DECIDED);
             // Link winning alternative
-            // rfc.setWinningAlternative(winningAlt); // si tienes este campo
+            // rfc.setWinningAlternative(winningAlt);
 
-            // Create ADR draft (using AdrService)
             // ADR adr = adrService.createDraftFromRfcAndAlternative(rfc, winningAlt);
             // rfc.setAdr(adr);
         }
         // Case 2: closed without alternative (US-23)
         else {
             rfc.setStatus(RFC.Status.CLOSED_NON_DECIDED);
-            // Puedes guardar el motivo de cierre si tu modelo lo soporta
+
         }
 
         RFC saved = rfcRepository.save(rfc);
