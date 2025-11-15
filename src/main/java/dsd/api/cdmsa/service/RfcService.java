@@ -6,6 +6,7 @@ import dsd.api.cdmsa.model.Comment;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import dsd.api.cdmsa.repository.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -26,12 +27,6 @@ import dsd.api.cdmsa.exception.RfcNotFoundException;
 import dsd.api.cdmsa.model.ADR;
 import dsd.api.cdmsa.model.Alternative;
 import dsd.api.cdmsa.model.RFC;
-import dsd.api.cdmsa.repository.AlternativeRepository;
-import dsd.api.cdmsa.repository.CommentRepository;
-import dsd.api.cdmsa.repository.OrganizationRepository;
-import dsd.api.cdmsa.repository.RfcRepository;
-import dsd.api.cdmsa.repository.TemplateRepository;
-import dsd.api.cdmsa.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -39,13 +34,12 @@ import lombok.RequiredArgsConstructor;
 public class RfcService {
     // Existing repositories
     private final RfcRepository rfcRepository;
+    private final AdrRepository adrRepository;
     private final UserRepository userRepository;
     private final TemplateRepository templateRepository;
     private final OrganizationRepository organizationRepository;
     private final AlternativeRepository alternativeRepository;
     private final CommentRepository commentRepository;
-
-    private final LLMService llmService;
 
     @Transactional
     public RfcResponse postCommentToRfc(Long rfcId, Long userId, CreateCommentRequest request) {
@@ -307,10 +301,12 @@ public class RfcService {
 
             rfc.setStatus(RFC.Status.CLOSED_DECIDED);
             // Link winning alternative
-            // rfc.setWinningAlternative(winningAlt); // maybe needed?
+            // rfc.setWinningAlternative(winningAlt);  maybe cool to have?
 
-            // Create ADR draft (using LLMService)
-            ADR adr = llmService.createDraftFromRfcAndAlternative(rfc, winningAlt);
+
+            ADR adr = adrRepository.findByRfcId(rfcId)
+                    .orElseThrow(() -> new RfcNotFoundException("ADR not found for this RFC"));
+
             rfc.setAdr(adr);
         }
         // Case 2: closed without alternative (US-23)

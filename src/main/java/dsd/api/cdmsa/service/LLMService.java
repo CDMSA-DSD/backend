@@ -1,10 +1,13 @@
 package dsd.api.cdmsa.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dsd.api.cdmsa.model.ADR;
+import dsd.api.cdmsa.dto.GenerateAdrRequest;
+import dsd.api.cdmsa.dto.GenerateAdrResponse;
+import dsd.api.cdmsa.exception.RfcNotFoundException;
 import dsd.api.cdmsa.model.Alternative;
 import dsd.api.cdmsa.model.RFC;
-import dsd.api.cdmsa.repository.AdrRepository;
+import dsd.api.cdmsa.repository.AlternativeRepository;
+import dsd.api.cdmsa.repository.RfcRepository;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,18 +17,27 @@ import static org.hibernate.query.sqm.tree.SqmNode.log;
 @Service
 public class LLMService {
 
-    private final AdrRepository adrRepository;
+    private final RfcRepository rfcRepository;
+    private final AlternativeRepository alternativeRepository;
     private final ChatClient llm;
     private final ObjectMapper objectMapper;
 
-    public LLMService(ChatClient.Builder chatClientBuilder, AdrRepository adrRepository, ObjectMapper objectMapper) {
+    public LLMService(ChatClient.Builder chatClientBuilder, ObjectMapper objectMapper, RfcRepository rfcRepository, AlternativeRepository alternativeRepository) {
         this.llm = chatClientBuilder.build();
-        this.adrRepository = adrRepository;
+        this.rfcRepository = rfcRepository;
+        this.alternativeRepository = alternativeRepository;
         this.objectMapper = objectMapper;
     }
 
     @Transactional
-    public ADR createDraftFromRfcAndAlternative(RFC rfc, Alternative alternative) {
+    public GenerateAdrResponse createDraftFromRfcAndAlternative(Long rfcId, Long userId, GenerateAdrRequest request) {
+
+        RFC rfc = rfcRepository.findById(rfcId)
+                .orElseThrow(() -> new RfcNotFoundException("RFC not found"));
+
+        Alternative alternative = alternativeRepository.findById(request.alternativeId())
+                .orElseThrow(() -> new RfcNotFoundException("Alternative not found"));
+
         // Create prompt for LLM
         String prompt = buildPrompt(rfc, alternative);
 
@@ -47,17 +59,12 @@ public class LLMService {
         }
 
 
-        // Create adr
-        ADR adr = new ADR();
-        adr.setRfc(rfc);
-        adr.setStatus(ADR.Status.DRAFT);
-        adr.setTitle("ADR for RFC #" + rfc.getId() + ": " + rfc.getTitle());
-
-        adr.setContext(content.context());
-        adr.setDecision(content.decision());
-        adr.setConsequences(content.consequences());
-
-        return adrRepository.save(adr);
+        return new GenerateAdrResponse(
+                "ADR for RFC #" + rfc.getId() + ": " + rfc.getTitle(),
+                content.context(),
+                content.decision(),
+                content.consequences()
+        );
     }
 
     private String buildPrompt(RFC rfc, Alternative alternative) {
