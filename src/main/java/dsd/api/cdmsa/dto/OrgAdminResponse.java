@@ -1,4 +1,4 @@
-package dsd.api.cdmsa.payload;
+package dsd.api.cdmsa.dto;
 
 import dsd.api.cdmsa.model.Organization;
 import dsd.api.cdmsa.model.User;

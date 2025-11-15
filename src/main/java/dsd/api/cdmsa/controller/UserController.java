@@ -8,7 +8,6 @@ import java.util.List;
 
 import dsd.api.cdmsa.exception.*;
 import dsd.api.cdmsa.model.User;
-import dsd.api.cdmsa.payload.LoginRequest;
 import dsd.api.cdmsa.service.UserService;
 
 import jakarta.validation.Valid;
@@ -32,15 +31,9 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    ResponseEntity<String> login(@Valid @RequestBody LoginRequest login) {
-        // Checks credentials
-        if (service.login(login)) {
-            // Return answer
-            return ResponseEntity.ok().body("Login successful");
-        }
+    public String login(@RequestBody User user) {
 
-        return ResponseEntity.status(401).body("Invalid username or password");
-
+        return service.verify(user);
     }
 
     // GET user (individual)
@@ -56,6 +49,7 @@ public class UserController {
         List<User> users = service.findUsers();
         return ResponseEntity.ok(users);
     }
+    
 
     // PUT user
     @PutMapping("/{id}")

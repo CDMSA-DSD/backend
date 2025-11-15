@@ -6,10 +6,10 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
 import java.util.List;
 
+import dsd.api.cdmsa.dto.OrgAdminRequest;
+import dsd.api.cdmsa.dto.OrgAdminResponse;
 import dsd.api.cdmsa.exception.*;
 import dsd.api.cdmsa.model.Organization;
-import dsd.api.cdmsa.payload.OrgAdminRequest;
-import dsd.api.cdmsa.payload.OrgAdminResponse;
 import dsd.api.cdmsa.service.OrgService;
 
 import jakarta.validation.Valid;

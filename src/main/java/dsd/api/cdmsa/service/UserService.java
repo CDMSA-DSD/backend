@@ -1,14 +1,17 @@
 package dsd.api.cdmsa.service;
 
+import java.security.InvalidParameterException;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import dsd.api.cdmsa.exception.UserExistsException;
-import dsd.api.cdmsa.exception.UserNotFoundException;
 import dsd.api.cdmsa.model.User;
-import dsd.api.cdmsa.payload.LoginRequest;
 import dsd.api.cdmsa.repository.UserRepository;
 
 import lombok.AllArgsConstructor;
@@ -17,7 +20,13 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class UserService {
 
+    private final JWTService jwtService;
+
+    private final AuthenticationManager authManager;
+
+
     private final UserRepository repository;
+    private final PasswordEncoder encoder;
 
     public boolean existUser(String email) {
         return repository.existsByEmail(email);
@@ -26,11 +35,22 @@ public class UserService {
     public User createUser(User user) {
         // Check if a user already exist
         if (!existUser(user.getEmail())) {
+            //Hash the password
+            user.setPassword(encoder.encode(user.getPassword()));
             // Store user
             return repository.save(user);
         }
         // Instead throw a exception that return 409- CONFLICT
         throw new UserExistsException(user.getName());
+    }
+
+    public String verify(User user) {
+        Authentication authentication = authManager.authenticate(new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
+        if (authentication.isAuthenticated()) {
+            return jwtService.generateToken(user.getUsername());
+        } else {
+            throw new InvalidParameterException();
+        }
     }
 
     public Optional<User> searchById(Long id) {
@@ -49,13 +69,5 @@ public class UserService {
         repository.deleteById(id);
     }
 
-    public boolean login (LoginRequest dto){
-        User user = repository.findByUsername(dto.getUsername()).orElseThrow(() -> new UserNotFoundException(dto.getUsername()));
-        if (user.getPassword().equals(dto.getPassword())) {
-            return true;
-        }
-        return false;
-
-    }
 
 }

@@ -5,12 +5,12 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
+import dsd.api.cdmsa.dto.OrgAdminRequest;
+import dsd.api.cdmsa.dto.OrgAdminResponse;
 import dsd.api.cdmsa.exception.OrgExistsException;
 import dsd.api.cdmsa.model.Organization;
 import dsd.api.cdmsa.model.User;
-import dsd.api.cdmsa.payload.OrgAdminRequest;
-import dsd.api.cdmsa.payload.OrgAdminResponse;
-import dsd.api.cdmsa.repository.OrgRepository;
+import dsd.api.cdmsa.repository.OrganizationRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 
@@ -18,7 +18,7 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class OrgService {
 
-    private final OrgRepository orgRepo;
+    private final OrganizationRepository orgRepo;
     private final UserService userService;
 
     public boolean existOrg(String name) {

@@ -1,4 +1,4 @@
-package dsd.api.cdmsa.payload;
+package dsd.api.cdmsa.dto;
 
 import lombok.Getter;
 import lombok.Setter;
