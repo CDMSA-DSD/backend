@@ -143,6 +143,20 @@ public class RfcController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/alternatives/{altId}/vote")
+    public ResponseEntity<VoteResponse> voteForAlternative(
+            @PathVariable Long altId,
+            @RequestBody VoteRequest voteRequest,
+            HttpServletRequest httpRequest) {
+
+        // check if user is a reviewer, probably we need also the rfcId to see status = under review
+        Long userId = getCurrentUserId(httpRequest);
+
+        VoteResponse resp = rfcService.voteForAlternative(altId, userId, voteRequest.outcome());
+
+        return ResponseEntity.ok(resp);
+    }
+
     // generate ADR of the RFC using LLM
     @PostMapping("/{rfcId}/generateadr")
     public ResponseEntity<GenerateAdrResponse> createDraftFromRfcAndAlternative(

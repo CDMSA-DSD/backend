@@ -2,6 +2,7 @@ package dsd.api.cdmsa.controller;
 
 import dsd.api.cdmsa.dto.AdrResponse;
 import dsd.api.cdmsa.dto.CreateAdrRequest;
+import dsd.api.cdmsa.dto.PublishAdrRequest;
 import dsd.api.cdmsa.service.AdrService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -44,10 +45,9 @@ public class AdrController {
         // TO DO - check if user is logged in ...
         Long userId = getCurrentUserId(httpRequest);
 
-        AdrResponse response = adrService.createAdr(request);
-        // build the markdown file from form, push it on GitHub through API, store it in the db (the url)
-        // ...
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        AdrResponse response = adrService.createAdr(request, userId);
+
+        return ResponseEntity.ok(response);
     }
 
 
@@ -67,7 +67,7 @@ public class AdrController {
                                                  @Valid @RequestBody dsd.api.cdmsa.dto.UpdateAdrRequest request,
                                                  HttpServletRequest httpRequest) {
         Long userId = getCurrentUserId(httpRequest);
-        AdrResponse response = adrService.updateAdr(id, request);
+        AdrResponse response = adrService.updateAdr(id, request, userId);
         return ResponseEntity.ok(response);
     }
 
@@ -78,7 +78,30 @@ public class AdrController {
         return adrService.listAdrs(pageable);
     }
 
+    @PostMapping("/publish")
+    public ResponseEntity<AdrResponse> publishAdr(@Valid @RequestBody PublishAdrRequest request, HttpServletRequest httpRequest) {
+        // TO DO - check if user is logged in ...
+        Long userId = getCurrentUserId(httpRequest);
 
+        // build the markdown file from form, push it on GitHub through API, store it in the db (the url)
+        AdrResponse response = adrService.publishAdr(request, userId);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /* it is necessary?
+
+    public ADR createDraftFromRfcAndAlternative(RFC rfc, Alternative alternative) {
+        ADR adr = new ADR();
+        adr.setRfc(rfc);
+        adr.setStatus(ADR.Status.DRAFT);
+        adr.setTitle("ADR for RFC #" + rfc.getId() + ": " + rfc.getTitle());
+        adr.setContext(rfc.getDescription());
+        adr.setDecision("Selected alternative: " + alternative.getTitle());
+        return adrRepository.save(adr);
+    }
+
+     */
 
 
 }
