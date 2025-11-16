@@ -1,5 +1,16 @@
 spring:
   application:
     name: cdmsa
+
+
+  ai:
+    openai:
+      api-key: "put here your openrouter token"
+      base-url: https://openrouter.ai/api
+      chat:
+        options:
+          model: mistralai/mistral-7b-instruct:free
+
+
 server:
   port: 8080
