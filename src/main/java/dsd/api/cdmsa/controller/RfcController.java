@@ -1,6 +1,7 @@
 package dsd.api.cdmsa.controller;
 
 import dsd.api.cdmsa.dto.*;
+import dsd.api.cdmsa.service.LLMService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 public class RfcController {
 
     private final RfcService rfcService;
+    private final LLMService llmService;
 
     /**
      * Retrieves the current user id from the request.
@@ -154,4 +156,16 @@ public class RfcController {
 
         return ResponseEntity.ok(resp);
     }
+
+    // generate ADR of the RFC using LLM
+    @PostMapping("/{rfcId}/generateadr")
+    public ResponseEntity<GenerateAdrResponse> createDraftFromRfcAndAlternative(
+            @PathVariable Long rfcId,
+            @RequestBody GenerateAdrRequest request,
+            HttpServletRequest httpRequest) {
+        Long userId = getCurrentUserId(httpRequest);
+        GenerateAdrResponse response = llmService.createDraftFromRfcAndAlternative(rfcId, userId, request);
+        return ResponseEntity.ok(response);
+    }
+
 }

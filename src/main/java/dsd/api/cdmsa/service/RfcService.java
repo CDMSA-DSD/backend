@@ -27,14 +27,13 @@ import lombok.RequiredArgsConstructor;
 public class RfcService {
     // Existing repositories
     private final RfcRepository rfcRepository;
+    private final AdrRepository adrRepository;
     private final UserRepository userRepository;
     private final TemplateRepository templateRepository;
     private final OrganizationRepository organizationRepository;
     private final AlternativeRepository alternativeRepository;
     private final CommentRepository commentRepository;
     private final VoteRepository voteRepository;
-
-    private final AdrService adrService;
 
     @Transactional
     public RfcResponse postCommentToRfc(Long rfcId, Long userId, CreateCommentRequest request) {
@@ -305,11 +304,13 @@ public class RfcService {
 
             rfc.setStatus(RFC.Status.CLOSED_DECIDED);
             // Link winning alternative
-            // rfc.setWinningAlternative(winningAlt); // si tienes este campo
+            // rfc.setWinningAlternative(winningAlt);  maybe cool to have?
 
-            // Create ADR draft (using AdrService)
-            // ADR adr = adrService.createDraftFromRfcAndAlternative(rfc, winningAlt);
-            // rfc.setAdr(adr);
+
+            ADR adr = adrRepository.findByRfcId(rfcId)
+                    .orElseThrow(() -> new RfcNotFoundException("ADR not found for this RFC"));
+
+            rfc.setAdr(adr);
         }
         // Case 2: closed without alternative (US-23)
         else {
