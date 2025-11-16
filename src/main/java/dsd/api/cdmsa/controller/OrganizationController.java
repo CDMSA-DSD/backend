@@ -1,13 +1,14 @@
 package dsd.api.cdmsa.controller;
 
-import dsd.api.cdmsa.dto.OrganizationResponse;
-import dsd.api.cdmsa.dto.UpdateOrganizationRequest;
+import dsd.api.cdmsa.dto.*;
 import dsd.api.cdmsa.service.OrganizationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @CrossOrigin(origins = "*")
@@ -48,5 +49,42 @@ public class OrganizationController {
         Long userId = getCurrentUserId(httpRequest);
         OrganizationResponse orgUpdated = orgService.updateOrgDetails(userId, request);
         return ResponseEntity.ok(orgUpdated);
+    }
+
+    // connect GitHub through pat
+    @PostMapping("/github")
+    public ResponseEntity<ConnectGitHubResponse> connectGitHub(@Valid @RequestBody ConnectGitHubRequest request, HttpServletRequest httpRequest){
+        // check id user is admin
+        Long userId = getCurrentUserId(httpRequest);
+        ConnectGitHubResponse resp = orgService.connectGitHub(userId, request);
+        return ResponseEntity.ok(resp);
+    }
+
+    // get the repos of the organization, to show them in a dropdown menu and select one
+    @GetMapping("/github/repos")
+    public ResponseEntity<List<RepositoryResponse>> getRepos(HttpServletRequest httpRequest) {
+        Long userId = getCurrentUserId(httpRequest);
+        return ResponseEntity.ok(orgService.getRepos(userId));
+    }
+
+    // get the branches of a certain repo of the organization, to show them in a dropdown menu and select one
+    // check if passing owner is necessary, we have only one owner?
+    @GetMapping("/github/{owner}/{repo}/branches") // owner and repo sent from the frontend, we have them from getRepos
+    public ResponseEntity<List<BranchResponse>> getBranches(@PathVariable String owner,
+                                                            @PathVariable String repo,
+                                                            HttpServletRequest httpRequest) {
+        Long userId = getCurrentUserId(httpRequest);
+        return ResponseEntity.ok(orgService.getBranches(userId, owner, repo));
+    }
+
+    // choose repo e branch where to store ADRs
+    @PutMapping("/github/selection")
+    public ResponseEntity<OrganizationResponse> saveRepoBranchSelection(
+            @Valid @RequestBody RepoBranchSelectionRequest request,
+            HttpServletRequest httpRequest) {
+
+        Long userId = getCurrentUserId(httpRequest);
+        OrganizationResponse response = orgService.saveRepoBranchSelection(userId, request);
+        return ResponseEntity.ok(response);
     }
 }

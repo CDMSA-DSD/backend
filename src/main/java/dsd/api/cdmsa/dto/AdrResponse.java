@@ -11,5 +11,6 @@ public record AdrResponse(
         ADR.Status status,
         Long rfcId,
         java.time.Instant createdAt,
-        java.time.Instant updatedAt) {
+        java.time.Instant updatedAt,
+        String gitHubUrl) {
 }
