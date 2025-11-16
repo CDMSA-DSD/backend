@@ -8,7 +8,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,9 +19,7 @@ import lombok.Setter;
  * workflows.
  */
 @Entity
-@Table(name = "contexts", uniqueConstraints = {
-        @UniqueConstraint(columnNames = { "org_id", "name" })
-})
+@Table(name = "contexts")
 @Getter
 @Setter
 @NoArgsConstructor

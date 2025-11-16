@@ -13,8 +13,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import dsd.api.cdmsa.dto.AddContextMemberRequest;
+import dsd.api.cdmsa.dto.ContextAdminResponse;
+import dsd.api.cdmsa.dto.ContextMemberResponse;
 import dsd.api.cdmsa.dto.ContextResponse;
 import dsd.api.cdmsa.dto.CreateContextRequest;
+import dsd.api.cdmsa.dto.PromoteContextAdminRequest;
 import dsd.api.cdmsa.dto.UpdateContextRequest;
 import dsd.api.cdmsa.service.ContextService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,7 +45,9 @@ public class ContextController {
         }
     }
 
-    // ---------------- US-08 Endpoints ----------------
+    // ===========================================================================
+    // US-08 Endpoints
+    // ===========================================================================
 
     /*
      * POST /contexts
@@ -112,4 +118,119 @@ public class ContextController {
         contextService.deleteContext(userId, id);
         return ResponseEntity.noContent().build();
     }
+
+    // =================================================================
+    // US-10: Context Admins
+    // =================================================================
+
+    /*
+     * POST /contexts/{contextId}/admins
+     * Promotes a user to Context Admin.
+     * Only organization admins can perform this action.
+     */
+
+    @PostMapping("/{contextId}/admins")
+    public ResponseEntity<ContextAdminResponse> promoteContextAdmin(
+            @PathVariable Long contextId,
+            @RequestBody PromoteContextAdminRequest request,
+            HttpServletRequest http) {
+        Long userId = getCurrentUserId(http);
+
+        ContextAdminResponse response = contextService.promoteContextAdmin(userId, contextId, request);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /*
+     * DELETE /contexts/{contextId}/admins/{targetUserId}
+     * Demotes a Context Admin back to a regular context member.
+     * Only organization admins can perform this action.
+     */
+
+    @DeleteMapping("/{contextId}/admins/{targetUserId}")
+    public ResponseEntity<Void> demoteContextAdmin(
+            @PathVariable Long contextId,
+            @PathVariable Long targetUserId,
+            HttpServletRequest http) {
+        Long userId = getCurrentUserId(http);
+
+        contextService.demoteContextAdmin(userId, contextId, targetUserId);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    /*
+     * GET /contexts/{contextId}/admins
+     * Lists all Context Admins of the context.
+     * Any user of the organization may view, unless you want to restrict it.
+     */
+
+    @GetMapping("/{contextId}/admins")
+    public ResponseEntity<List<ContextAdminResponse>> listContextAdmins(
+            @PathVariable Long contextId,
+            HttpServletRequest http) {
+        Long userId = getCurrentUserId(http);
+
+        List<ContextAdminResponse> admins = contextService.listContextAdmins(userId, contextId);
+
+        return ResponseEntity.ok(admins);
+    }
+
+    // ===================================================
+    // US-09: Context Members
+    // ===================================================
+
+    /*
+     * POST /contexts/{contextId}/members
+     * Adds a user to a context
+     * Only organization and context admins can perform this action.
+     */
+
+    @PostMapping("/{contextId}/members")
+    public ResponseEntity<ContextMemberResponse> addMember(
+            @PathVariable Long contextId,
+            @RequestBody AddContextMemberRequest request,
+            HttpServletRequest http) {
+        Long userId = getCurrentUserId(http);
+
+        ContextMemberResponse response = contextService.addMember(userId, contextId, request);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /*
+     * DELETE /contexts/{contextId}/members/{userId}
+     * Eliminates an user from a context
+     * Only organization and context admins can perform this action.
+     */
+
+    @DeleteMapping("/{contextId}/members/{targetUserId}")
+    public ResponseEntity<Void> removeMember(
+            @PathVariable Long contextId,
+            @PathVariable Long targetUserId,
+            HttpServletRequest http) {
+        Long userId = getCurrentUserId(http);
+
+        contextService.removeMember(userId, contextId, targetUserId);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    /*
+     * GET /contexts/{contextId}/members
+     * Lists all the members of a context
+     * Only organization and context admins can perform this action.
+     */
+
+    @GetMapping("/{contextId}/members")
+    public ResponseEntity<List<ContextMemberResponse>> listMembers(
+            @PathVariable Long contextId,
+            HttpServletRequest http) {
+        Long userId = getCurrentUserId(http);
+
+        List<ContextMemberResponse> members = contextService.listMembers(userId, contextId);
+
+        return ResponseEntity.ok(members);
+    }
+
 }

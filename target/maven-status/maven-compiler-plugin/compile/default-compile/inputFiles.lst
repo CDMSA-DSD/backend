@@ -5,11 +5,14 @@ C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\c
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\controller\OrgController.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\controller\RfcController.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\controller\UserController.java
+C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\AddContextMemberRequest.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\AdrRequest.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\AdrResponse.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\AlternativeResponse.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\CloseRfcRequest.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\CommentResponse.java
+C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\ContextAdminResponse.java
+C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\ContextMemberResponse.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\ContextResponse.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\CreateAdrRequest.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\CreateAlternativeRequest.java
@@ -17,6 +20,7 @@ C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\d
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\CreateContextRequest.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\CreateRfcRequest.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\OrganizationResponse.java
+C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\PromoteContextAdminRequest.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\RfcResponse.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\UpdateAdrRequest.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\dto\UpdateContextRequest.java
@@ -43,6 +47,7 @@ C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\m
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\model\Alternative.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\model\Comment.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\model\Context.java
+C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\model\ContextMembership.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\model\Observer.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\model\Organization.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\model\Reviewer.java
@@ -58,6 +63,7 @@ C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\r
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\repository\AlternativeRepository.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\repository\CommentRepository.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\repository\CommentResponses.java
+C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\repository\ContextMembershipRepository.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\repository\ContextRepository.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\repository\OrganizationRepository.java
 C:\Users\mruiz\OneDrive\Escritorio\VSC\DSD\backend\src\main\java\dsd\api\cdmsa\repository\OrgRepository.java
