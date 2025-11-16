@@ -15,7 +15,7 @@ public record CommentResponses(
                 c.getId(),
                 c.getContent(),
                 c.getAuthor() != null ? c.getAuthor().getId() : null,
-                c.getAuthor() != null ? c.getAuthor().getName() : null,
+                c.getAuthor() != null ? c.getAuthor().getFirstname() : null,
                 c.getCreatedAt(),
                 c.getUpdatedAt());
     }

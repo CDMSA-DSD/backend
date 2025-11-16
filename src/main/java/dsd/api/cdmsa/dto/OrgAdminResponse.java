@@ -1,15 +1,8 @@
 package dsd.api.cdmsa.dto;
 
-import dsd.api.cdmsa.model.Organization;
-import dsd.api.cdmsa.model.User;
+import java.util.Map;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-
-@Getter
-@AllArgsConstructor
-public class OrgAdminResponse {
-
-    private Organization org;
-    private User admin;
+public record OrgAdminResponse(
+        Long id_org,
+        Map<String, Object> adminUri) {
 }

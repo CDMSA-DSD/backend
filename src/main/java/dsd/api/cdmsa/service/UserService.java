@@ -1,17 +1,19 @@
 package dsd.api.cdmsa.service;
 
 import java.security.InvalidParameterException;
-import java.util.List;
-import java.util.Optional;
 
+import org.springframework.data.domain.*;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import dsd.api.cdmsa.dto.LoginRequest;
 import dsd.api.cdmsa.exception.UserExistsException;
+import dsd.api.cdmsa.exception.UserNotFoundException;
 import dsd.api.cdmsa.model.User;
+import dsd.api.cdmsa.model.UserPrincipal;
 import dsd.api.cdmsa.repository.UserRepository;
 
 import lombok.AllArgsConstructor;
@@ -24,7 +26,6 @@ public class UserService {
 
     private final AuthenticationManager authManager;
 
-
     private final UserRepository repository;
     private final PasswordEncoder encoder;
 
@@ -35,30 +36,37 @@ public class UserService {
     public User createUser(User user) {
         // Check if a user already exist
         if (!existUser(user.getEmail())) {
-            //Hash the password
+            // Hash the password
             user.setPassword(encoder.encode(user.getPassword()));
             // Store user
             return repository.save(user);
         }
         // Instead throw a exception that return 409- CONFLICT
-        throw new UserExistsException(user.getName());
+        throw new UserExistsException(user.getFirstname() + " " + user.getLastname());
     }
 
-    public String verify(User user) {
-        Authentication authentication = authManager.authenticate(new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
+    public String verify(LoginRequest login) {
+        Authentication authentication = authManager
+                .authenticate(new UsernamePasswordAuthenticationToken(login.email(), login.password()));
+
         if (authentication.isAuthenticated()) {
-            return jwtService.generateToken(user.getUsername());
+            UserPrincipal authUser = (UserPrincipal) authentication.getPrincipal();
+            User user = authUser.getUser();
+            return jwtService.generateToken(user);
+
         } else {
             throw new InvalidParameterException();
         }
     }
 
-    public Optional<User> searchById(Long id) {
-        return repository.findById(id);
+    public User searchById(Long id) {
+        User user = repository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
+        return user;
     }
 
-    public List<User> findUsers() {
-        return repository.findAll();
+    public Page<User> findAllUsers(Long orgId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return repository.findByOrgId(orgId, pageable);
     }
 
     public boolean existUserById(Long id) {
@@ -68,6 +76,5 @@ public class UserService {
     public void deleteUser(Long id) {
         repository.deleteById(id);
     }
-
 
 }

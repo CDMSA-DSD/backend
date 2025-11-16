@@ -1,18 +1,19 @@
 package dsd.api.cdmsa.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.web.PagedResourcesAssembler;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.PagedModel;
 
-import java.util.List;
-
-import dsd.api.cdmsa.dto.OrgAdminRequest;
-import dsd.api.cdmsa.dto.OrgAdminResponse;
-import dsd.api.cdmsa.exception.*;
+import dsd.api.cdmsa.assembler.OrgModelAssembler;
+import dsd.api.cdmsa.dto.OrganizationResponse;
 import dsd.api.cdmsa.model.Organization;
+import dsd.api.cdmsa.model.UserPrincipal;
 import dsd.api.cdmsa.service.OrgService;
 
-import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 
 @RestController
@@ -23,39 +24,24 @@ public class OrgController {
 
     private final OrgService service;
 
-    // POST Orgs
-    @PostMapping()
-    ResponseEntity<OrgAdminResponse> newOrg(@Valid @RequestBody OrgAdminRequest newOrg) {
-
-        // Store Org
-        OrgAdminResponse dto = service.createOrg(newOrg);
-        // Return answer
-        return ResponseEntity.created(linkTo(OrgController.class).slash(dto.getOrg().getId()).toUri()).body(dto);
-    }
+    private OrgModelAssembler orgModelAssembler;
+    private PagedResourcesAssembler<Organization> pagedResourcesAssembler;
 
     // GET Org (individual)
-    @GetMapping(value = "/{id}", produces = { "application/json" })
-    public ResponseEntity<Organization> getOrg(@PathVariable Long id) {
-        Organization org = service.searchById(id).orElseThrow(() -> new OrgNotFoundException(id));
-        return ResponseEntity.ok(org);
+    @GetMapping(value = "/{id}")
+    public ResponseEntity<EntityModel<OrganizationResponse>> getOrg(@PathVariable Long id) {
+        Organization org = service.getOrgDetails(id);
+        return ResponseEntity.ok(orgModelAssembler.toModel(org));
     }
 
-    // GET Orgs (collection)
-    @GetMapping(value = "", produces = { "application/json" })
-    public ResponseEntity<List<Organization>> getOrgs() {
-        List<Organization> orgs = service.findOrgs();
-        return ResponseEntity.ok(orgs);
-    }
+    @GetMapping
+    public ResponseEntity<PagedModel<EntityModel<OrganizationResponse>>> getAllUsers(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(defaultValue = "0", required = false) int page,
+            @RequestParam(defaultValue = "2", required = false) int size) {
 
-    // DELETE Org
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteOrg(@PathVariable Long id) {
-        if (service.existOrgById(id)) {
-            service.deleteOrg(id);
-        } else {
-            throw new OrgNotFoundException(id);
-        }
-        return ResponseEntity.noContent().build();
+        Page<Organization> orgs = service.findAllOrgs(principal.getOrgId(), page, size);
+        return ResponseEntity.ok(pagedResourcesAssembler.toModel(orgs, orgModelAssembler));
     }
 
 }

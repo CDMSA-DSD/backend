@@ -1,7 +1,10 @@
 package dsd.api.cdmsa.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 public record OrganizationResponse(
-        String companyName,
+        Long id,
+        @NotBlank(message = "Username cannot be blank") String companyName,
         String description,
         String domain //,
         // String gitHubToken

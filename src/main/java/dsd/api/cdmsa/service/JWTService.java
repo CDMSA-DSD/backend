@@ -9,9 +9,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
+import dsd.api.cdmsa.model.User;
+
 import javax.crypto.SecretKey;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -23,17 +24,27 @@ public class JWTService {
     private String secretKey;
 
     // Token expiration time in milliseconds
-    @Value("${jwt.expiration:90000}") // default 15 min
+    @Value("${jwt.expiration:900000}") // default 15 min
     private long jwtExpiration;
 
     // Generate a JWT with username as the subject
-    public String generateToken(String username) {
-        Map<String, Object> claims = new HashMap<>();
+    public String generateToken(User user) {
+        System.out.println("GENERANDO TOKEN...");
+        System.out.println("USER EMAIL: " + user.getEmail());
+        System.out.println("USER ORG: " + user.getOrg().getName());
+        
+        Map<String, Object> claims = Map.of(
+            "userId", user.getId(),
+            "email", user.getEmail(),
+            "orgId", user.getOrg().getId()
+        );
+
+        System.out.println("TOKEN GENERADO");
 
         return Jwts.builder()
                 .claims()
                 .add(claims)
-                .subject(username)
+                .subject(user.getEmail())
                 .issuedAt(new Date(System.currentTimeMillis()))
                 // Expiration is configurable from properties
                 .expiration(new Date(System.currentTimeMillis() + jwtExpiration))

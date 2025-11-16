@@ -38,7 +38,7 @@ public class SecurityConfig {
                 .csrf(customizer -> customizer.disable())
                 // Public endpoints: login and register
                 .authorizeHttpRequests(request -> request 
-                        .requestMatchers("/login", "/register").permitAll()
+                        .requestMatchers("/auth/login", "/auth/register-org", "/auth/register-invitation").permitAll()
                         // Any other request requires authentication
                         .anyRequest().authenticated())
                 // Disable session creation; every request must bring its own token

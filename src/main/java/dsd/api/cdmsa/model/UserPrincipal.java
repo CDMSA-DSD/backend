@@ -8,11 +8,14 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 @AllArgsConstructor
+@Getter
 public class UserPrincipal implements UserDetails{
 
     private User user;
+    private Long orgId;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -26,7 +29,7 @@ public class UserPrincipal implements UserDetails{
 
     @Override
     public String getUsername() {
-        return user.getUsername();
+        return user.getEmail();
     }
     
 }

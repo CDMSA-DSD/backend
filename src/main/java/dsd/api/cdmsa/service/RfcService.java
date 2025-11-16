@@ -68,7 +68,7 @@ public class RfcService {
         .map(c -> new CommentResponse(
             c.getId(),
             c.getAuthor() != null ? c.getAuthor().getId() : null,
-            c.getAuthor() != null ? c.getAuthor().getUsername() : null,
+            c.getAuthor() != null ? c.getAuthor().getEmail() : null,  // Before getUsername
             c.getContent(),
             c.getCreatedAt(),
             c.getUpdatedAt()
@@ -81,7 +81,7 @@ public class RfcService {
         rfc.getTitle(),
         rfc.getDescription(),
         rfc.getUser() != null ? rfc.getUser().getId() : null,
-        rfc.getUser() != null ? rfc.getUser().getName() : null,
+        rfc.getUser() != null ? rfc.getUser().getFirstname() : null, //Before getName
         rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
         rfc.getOrg() != null ? rfc.getOrg().getId() : null,
         rfc.getStatus(),
@@ -157,7 +157,7 @@ public class RfcService {
         rfc.getTitle(),
         rfc.getDescription(),
         rfc.getUser() != null ? rfc.getUser().getId() : null,
-        rfc.getUser() != null ? rfc.getUser().getName() : null,
+        rfc.getUser() != null ? rfc.getUser().getFirstname() : null, //Before getName
         rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
         rfc.getOrg() != null ? rfc.getOrg().getId() : null,
         rfc.getStatus(),
@@ -176,7 +176,7 @@ public class RfcService {
         .map(c -> new CommentResponse(
             c.getId(),
             c.getAuthor() != null ? c.getAuthor().getId() : null,
-            c.getAuthor() != null ? c.getAuthor().getUsername() : null,
+            c.getAuthor() != null ? c.getAuthor().getEmail() : null, //Before getUsernam
             c.getContent(),
             c.getCreatedAt(),
             c.getUpdatedAt()
@@ -188,7 +188,7 @@ public class RfcService {
         rfc.getTitle(),
         rfc.getDescription(),
         rfc.getUser() != null ? rfc.getUser().getId() : null,
-        rfc.getUser() != null ? rfc.getUser().getName() : null,
+        rfc.getUser() != null ? rfc.getUser().getFirstname() : null, // Before getName
         rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
         rfc.getOrg() != null ? rfc.getOrg().getId() : null,
         rfc.getStatus(),

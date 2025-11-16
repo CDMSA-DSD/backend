@@ -18,9 +18,9 @@ public class CDMSAUserDetailsService implements UserDetailsService {
     private final UserRepository repository;
 
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = repository.findByUsername(username).orElseThrow(() -> new UserNotFoundException(username));
-        return new UserPrincipal(user);
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        User user = repository.findByEmail(email).orElseThrow(() -> new UserNotFoundException(email));
+        return new UserPrincipal(user, user.getOrg().getId());
     }
 
 }
