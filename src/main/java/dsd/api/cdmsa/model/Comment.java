@@ -45,4 +45,11 @@ public class Comment {
     protected void onUpdate() {
         this.updatedAt = java.time.Instant.now();
     }
+
+    @ManyToOne
+    @JoinColumn(name = "parent_id")
+    private Comment parent;
+
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.Set<Comment> replies = new java.util.HashSet<>();
 }
