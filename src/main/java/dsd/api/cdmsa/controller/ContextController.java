@@ -25,6 +25,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
 @RestController
+@CrossOrigin(origins = "*")
 @RequestMapping("/contexts")
 @RequiredArgsConstructor
 public class ContextController {
