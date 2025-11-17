@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import dsd.api.cdmsa.dto.LoginRequest;
 import dsd.api.cdmsa.dto.OrgAdminRequest;
 import dsd.api.cdmsa.dto.OrgAdminResponse;
+import dsd.api.cdmsa.dto.SignInRequest;
 import dsd.api.cdmsa.model.User;
 import dsd.api.cdmsa.service.OrgService;
 import dsd.api.cdmsa.service.UserService;
@@ -38,9 +39,9 @@ public class AuthController {
     }
 
     @PostMapping("/register-invitation")
-    ResponseEntity<Void> register(@Valid @RequestBody User newUser) {
+    ResponseEntity<Void> register(@Valid @RequestBody SignInRequest newUser, @RequestParam String token) {
         // Store user
-        User user = userService.createUser(newUser); //add link invitation
+        User user = userService.createUserByInvitation(newUser, token); //add link invitation
         // Return answer
         return ResponseEntity.created(linkTo(methodOn(UserController.class).getUser(user.getId())).toUri()).build();
     }

@@ -17,6 +17,10 @@ jwt:
   secret: xH2t9RjAff+7OQzAPDBtUxkcoZ1FGMfAcJj5851gX+cjiC5vudFwyoLuhMkj4iO1mXFET/w2akpTnX2vrZtS9g==
   expirantion-access-token: 9000000
 
+app:
+  frontend:
+    base-url: http://localhost:8080
+
     
 
 # --------------------- CHATGPT RECOMMENDATIONS FOR THIS FILE -----------------------------------

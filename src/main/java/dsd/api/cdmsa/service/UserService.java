@@ -10,8 +10,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import dsd.api.cdmsa.dto.LoginRequest;
+import dsd.api.cdmsa.dto.SignInRequest;
 import dsd.api.cdmsa.exception.UserExistsException;
 import dsd.api.cdmsa.exception.UserNotFoundException;
+import dsd.api.cdmsa.model.OrganizationInvitation;
 import dsd.api.cdmsa.model.User;
 import dsd.api.cdmsa.model.UserPrincipal;
 import dsd.api.cdmsa.repository.UserRepository;
@@ -23,6 +25,7 @@ import lombok.AllArgsConstructor;
 public class UserService {
 
     private final JWTService jwtService;
+    private final OrganizationInvitationService invitationService;
 
     private final AuthenticationManager authManager;
 
@@ -43,6 +46,22 @@ public class UserService {
         }
         // Instead throw a exception that return 409- CONFLICT
         throw new UserExistsException(user.getFirstname() + " " + user.getLastname());
+    }
+
+     public User createUserByInvitation(SignInRequest registration, String token) {
+        
+
+        OrganizationInvitation invitation = invitationService.getInvitationByToken(token); // retrive invitation with that id and token
+
+         // Creates the user (set all the parameters)
+            User user = new User();
+            user.setFirstname(registration.firstname());
+            user.setLastname(registration.lastname());
+            user.setEmail(registration.email());
+            user.setPassword(registration.password()); // Hashed later in createUser
+            user.setOrg(invitation.getOrg());
+
+        return createUser(user);
     }
 
     public String verify(LoginRequest login) {
