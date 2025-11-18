@@ -46,7 +46,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public String login(@RequestBody LoginRequest user) {
+    public LoginResponse login(@RequestBody LoginRequest user) {
         return userService.verify(user); // Return JWT token con dto or cookie
     }
 }
