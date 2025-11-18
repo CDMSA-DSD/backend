@@ -71,10 +71,46 @@ public class AdrService {
         );
     }
 
+    // ===================== Org-aware methods =====================
+
+    @Transactional(readOnly = true)
+    public AdrResponse getAdrByIdForOrg(Long id, Long orgId) {
+        ADR adr = adrRepository.findByIdAndRfc_Org_Id(id, orgId)
+                .orElseThrow(() -> new EntityNotFoundException("ADR not found with id " + id));
+
+        return new AdrResponse(
+                adr.getId(),
+                adr.getTitle(),
+                adr.getContext(),
+                adr.getDecision(),
+                adr.getConsequences(),
+                adr.getStatus(),
+                adr.getRfc().getId(),
+                adr.getCreatedAt(),
+                adr.getUpdatedAt()
+        );
+    }
+
 
     @Transactional(readOnly = true)
     public Page<AdrResponse> listAdrs(Pageable pageable) {
         return adrRepository.findAll(pageable)
+                .map(adr -> new AdrResponse(
+                        adr.getId(),
+                        adr.getTitle(),
+                        adr.getContext(),
+                        adr.getDecision(),
+                        adr.getConsequences(),
+                        adr.getStatus(),
+                        adr.getRfc().getId(),
+                        adr.getCreatedAt(),
+                        adr.getUpdatedAt()
+                ));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<AdrResponse> listAdrsByOrg(Long orgId, Pageable pageable) {
+        return adrRepository.findByRfc_Org_Id(orgId, pageable)
                 .map(adr -> new AdrResponse(
                         adr.getId(),
                         adr.getTitle(),
@@ -111,6 +147,60 @@ public class AdrService {
         adr.setConsequences(request.consequences() != null ? request.consequences().trim() : null);
         adr.setStatus(request.status());
 
+        ADR saved = adrRepository.save(adr);
+
+        return new AdrResponse(
+                saved.getId(),
+                saved.getTitle(),
+                saved.getContext(),
+                saved.getDecision(),
+                saved.getConsequences(),
+                saved.getStatus(),
+                saved.getRfc().getId(),
+                saved.getCreatedAt(),
+                saved.getUpdatedAt()
+        );
+    }
+
+    @Transactional
+    public AdrResponse updateAdrForOrg(Long id, Long orgId, UpdateAdrRequest request) {
+        ADR adr = adrRepository.findByIdAndRfc_Org_Id(id, orgId)
+                .orElseThrow(() -> new EntityNotFoundException("ADR not found with id " + id));
+
+        adr.setTitle(request.title() != null ? request.title().trim() : null);
+        adr.setContext(request.context() != null ? request.context().trim() : null);
+        adr.setDecision(request.decision() != null ? request.decision().trim() : null);
+        adr.setConsequences(request.consequences() != null ? request.consequences().trim() : null);
+        adr.setStatus(request.status());
+
+        ADR saved = adrRepository.save(adr);
+
+        return new AdrResponse(
+                saved.getId(),
+                saved.getTitle(),
+                saved.getContext(),
+                saved.getDecision(),
+                saved.getConsequences(),
+                saved.getStatus(),
+                saved.getRfc().getId(),
+                saved.getCreatedAt(),
+                saved.getUpdatedAt()
+        );
+    }
+
+    @Transactional
+    public AdrResponse createAdr(Long userId, Long orgId, CreateAdrRequest request) {
+        // Ensure RFC exists and belongs to user's organization
+        RFC rfc = rfcRepository.findByIdAndOrgId(request.rfcId(), orgId)
+                .orElseThrow(() -> new EntityNotFoundException("RFC not found with id " + request.rfcId()));
+
+        ADR adr = new ADR();
+        adr.setTitle(request.title().trim());
+        adr.setContext(request.context().trim());
+        adr.setDecision(request.decision().trim());
+        adr.setConsequences(request.consequences().trim());
+        adr.setStatus(request.status());
+        adr.setRfc(rfc);
         ADR saved = adrRepository.save(adr);
 
         return new AdrResponse(

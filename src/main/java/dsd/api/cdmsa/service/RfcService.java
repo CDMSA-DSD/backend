@@ -94,7 +94,7 @@ public class RfcService {
     // ---------- US-12: Create RFC ----------
 
     @Transactional
-    public RfcResponse createRfc(Long userId, CreateRfcRequest request) {
+    public RfcResponse createRfc(Long userId, Long orgId, CreateRfcRequest request) {
 
         // Validate request body
         if (request == null) {
@@ -109,9 +109,6 @@ public class RfcService {
         if (request.templateId() == null) {
             throw new RfcBadRequestException("TemplateId is required");
         }
-        if (request.orgId() == null) {
-            throw new RfcBadRequestException("OrgId is required");
-        }
 
         // Validate related entities
         var user = userRepository.findById(userId)
@@ -120,7 +117,7 @@ public class RfcService {
         var template = templateRepository.findById(request.templateId())
                 .orElseThrow(() -> new RfcDependencyNotFoundException("Template not found"));
 
-        var org = organizationRepository.findById(request.orgId())
+        var org = organizationRepository.findById(orgId)
                 .orElseThrow(() -> new RfcDependencyNotFoundException("Organization not found"));
 
         // Build RFC entity
@@ -143,9 +140,31 @@ public class RfcService {
                 .map(this::toResponse);
     }
 
+    /**
+     * Returns a paginated list of RFCs that belong to the specified organization.
+     * This is the org-scoped variant used by controllers to ensure users only
+     * see RFCs belonging to their organization.
+     */
+    @Transactional(readOnly = true)
+    public Page<RfcResponse> listRfcsByOrg(Long orgId, Pageable pageable) {
+        return rfcRepository.findByOrgId(orgId, pageable)
+                .map(this::toResponse);
+    }
+
     @Transactional(readOnly = true)
     public RfcResponse getRfcById(Long rfcId) {
         RFC rfc = rfcRepository.findById(rfcId)
+                .orElseThrow(() -> new RfcNotFoundException("RFC not found with id " + rfcId));
+        return toDetailedResponse(rfc);
+    }
+
+    /**
+     * Returns a RFC only if it belongs to the given organization. Used to
+     * ensure organization-scoped access to RFC details.
+     */
+    @Transactional(readOnly = true)
+    public RfcResponse getRfcByIdForOrg(Long rfcId, Long orgId) {
+        RFC rfc = rfcRepository.findByIdAndOrgId(rfcId, orgId)
                 .orElseThrow(() -> new RfcNotFoundException("RFC not found with id " + rfcId));
         return toDetailedResponse(rfc);
     }
@@ -256,6 +275,19 @@ public class RfcService {
             throw new RfcNotFoundException("RFC not found with id " + rfcId);
         }
 
+        return alternativeRepository.findByRfcId(rfcId).stream()
+                .map(AlternativeResponse::fromEntity)
+                .toList();
+    }
+
+    /**
+     * List alternatives but only if the RFC belongs to the given organization.
+     */
+    @Transactional(readOnly = true)
+    public List<AlternativeResponse> listAlternativesForOrg(Long rfcId, Long orgId) {
+        if (!rfcRepository.existsByIdAndOrgId(rfcId, orgId)) {
+            throw new RfcNotFoundException("RFC not found with id " + rfcId);
+        }
         return alternativeRepository.findByRfcId(rfcId).stream()
                 .map(AlternativeResponse::fromEntity)
                 .toList();
