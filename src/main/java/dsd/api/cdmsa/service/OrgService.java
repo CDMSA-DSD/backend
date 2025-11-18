@@ -107,7 +107,7 @@ public class OrgService {
 
     public Page<Organization> findAllOrgs(Long orgId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return orgRepo.findByOrgId(orgId, pageable);
+        return orgRepo.findById(orgId, pageable);
     }
 
 }

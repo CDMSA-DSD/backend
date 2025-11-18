@@ -1,10 +1,10 @@
 package dsd.api.cdmsa.dto;
 
-public record LoginResponse(
-        Long id,
-        String firstname,
-        String lastName,
-        String email
-        ) {
+import java.util.List;
 
-}
+public record LoginResponse(
+        UserResponse user,
+        String token,
+        boolean isAdmin,
+        List<ContextByAdminResponse> contextIsAdmin
+        ) {}

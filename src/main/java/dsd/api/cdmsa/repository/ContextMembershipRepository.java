@@ -20,10 +20,15 @@ public interface ContextMembershipRepository extends JpaRepository<ContextMember
     // Returns all context admins within a context.
     List<ContextMembership> findByContextIdAndContextAdminTrue(Long contextId);
 
+    // Returns all context admins within a context.
+    List<ContextMembership> findByUserIdAndContextAdminTrue(Long userId);
+
     // Checks if a user is already a member of a context.
     boolean existsByContextIdAndUserId(Long contextId, Long userId);
 
     // Checks if a user is already a member of a context and is a context admin.
     boolean existsByContextIdAndUserIdAndContextAdminTrue(Long contextId, Long userId);
+
+    
 
 }

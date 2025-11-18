@@ -1,6 +1,7 @@
 package dsd.api.cdmsa.service;
 
 import java.security.InvalidParameterException;
+import java.util.List;
 
 import org.springframework.data.domain.*;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -9,9 +10,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import dsd.api.cdmsa.dto.ContextByAdminResponse;
 import dsd.api.cdmsa.dto.LoginRequest;
+import dsd.api.cdmsa.dto.LoginResponse;
+import dsd.api.cdmsa.dto.UserResponse;
 import dsd.api.cdmsa.exception.UserExistsException;
 import dsd.api.cdmsa.exception.UserNotFoundException;
+import dsd.api.cdmsa.mapper.UserMapper;
 import dsd.api.cdmsa.model.User;
 import dsd.api.cdmsa.model.UserPrincipal;
 import dsd.api.cdmsa.repository.UserRepository;
@@ -23,6 +28,7 @@ import lombok.AllArgsConstructor;
 public class UserService {
 
     private final JWTService jwtService;
+    private final ContextService contextService;
 
     private final AuthenticationManager authManager;
 
@@ -45,18 +51,27 @@ public class UserService {
         throw new UserExistsException(user.getFirstname() + " " + user.getLastname());
     }
 
-    public String verify(LoginRequest login) {
+    public LoginResponse login(LoginRequest login) {
         Authentication authentication = authManager
                 .authenticate(new UsernamePasswordAuthenticationToken(login.email(), login.password()));
 
         if (authentication.isAuthenticated()) {
             UserPrincipal authUser = (UserPrincipal) authentication.getPrincipal();
             User user = authUser.getUser();
-            return jwtService.generateToken(user);
+            String token = jwtService.generateToken(user);
+            boolean isAdmin = isOrgAdmin(user);
+            List<ContextByAdminResponse> contextsIsAdmin = contextService.findContextByAdmin(user);
+
+            UserResponse dto = UserMapper.toDto(user);
+            return new LoginResponse(dto, token, isAdmin, contextsIsAdmin);
 
         } else {
             throw new InvalidParameterException();
         }
+    }
+
+    private boolean isOrgAdmin (User user) {
+        return user.getId().equals(user.getOrg().getAdminUser().getId());
     }
 
     public User searchById(Long id) {

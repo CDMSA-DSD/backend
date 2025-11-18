@@ -43,4 +43,5 @@ public class MeController {
 
         return ResponseEntity.ok(orgModelAssembler.toModel(org));
     }
+
 }
