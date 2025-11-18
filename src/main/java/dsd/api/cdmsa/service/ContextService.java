@@ -127,11 +127,13 @@ public class ContextService {
         }
 
         Context context = new Context();
+
         context.setOrganization(org);
         context.setName(trimmedName);
         context.setType(request.type());
         context.setDescription(request.description());
         context.setActive(true);
+        context.setCreatedAt(java.time.Instant.now());
 
         Context saved = contextRepository.save(context);
         return ContextResponse.fromEntity(saved);
@@ -326,8 +328,8 @@ public class ContextService {
     @Transactional
     public ContextMemberResponse addMember(Long actingUserId, Long contextId, AddContextMemberRequest request) {
 
-        if (request == null || request.userId() == null) {
-            throw new ContextBadRequestException("UserId is required");
+        if (request == null || request.email() == null || request.email().isBlank()) {
+            throw new ContextBadRequestException("Email is required");
         }
 
         User actingUser = getCurrentUserOrThrow(actingUserId);
@@ -336,22 +338,19 @@ public class ContextService {
 
         Organization org = context.getOrganization();
 
-        // User must be part of the org
         if (!org.getId().equals(actingUser.getOrg().getId())) {
             throw new ContextForbiddenException("You do not belong to this organization");
         }
 
-        // Check if user is Org Admin or Context Admin
         ensureCanManageContextMembers(actingUser, context);
 
-        User targetUser = getCurrentUserOrThrow(request.userId());
+        User targetUser = userRepository.findByEmail(request.email().trim())
+                .orElseThrow(() -> new ContextBadRequestException("User with this email does not exist"));
 
-        // The user we want to add to the context must be part of the org
         if (targetUser.getOrg() == null || !targetUser.getOrg().getId().equals(org.getId())) {
             throw new ContextBadRequestException("User does not belong to this organization");
         }
 
-        // The user we want to add is already a member of the context
         if (membershipRepository.existsByContextIdAndUserId(contextId, targetUser.getId())) {
             throw new ContextBadRequestException("User is already a member of this context");
         }
@@ -359,6 +358,7 @@ public class ContextService {
         ContextMembership membership = new ContextMembership();
         membership.setContext(context);
         membership.setUser(targetUser);
+        membership.setUserEmail(targetUser.getEmail());
         membership.setContextAdmin(false);
 
         ContextMembership saved = membershipRepository.save(membership);
