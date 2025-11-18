@@ -1,35 +1,24 @@
 package dsd.api.cdmsa.service;
 
+import dsd.api.cdmsa.dto.*;
+import dsd.api.cdmsa.model.*;
+
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
+import dsd.api.cdmsa.repository.*;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import dsd.api.cdmsa.dto.AlternativeResponse;
-import dsd.api.cdmsa.dto.CloseRfcRequest;
-import dsd.api.cdmsa.dto.CommentResponse;
-import dsd.api.cdmsa.dto.CreateAlternativeRequest;
-import dsd.api.cdmsa.dto.CreateCommentRequest;
-import dsd.api.cdmsa.dto.CreateRfcRequest;
-import dsd.api.cdmsa.dto.RfcResponse;
 import dsd.api.cdmsa.exception.RfcAlternativeBadRequestException;
 import dsd.api.cdmsa.exception.RfcAlternativeNotAllowedException;
 import dsd.api.cdmsa.exception.RfcBadRequestException;
 import dsd.api.cdmsa.exception.RfcDependencyNotFoundException;
 import dsd.api.cdmsa.exception.RfcInvalidStatusException;
 import dsd.api.cdmsa.exception.RfcNotFoundException;
-import dsd.api.cdmsa.model.Alternative;
-import dsd.api.cdmsa.model.Comment;
-import dsd.api.cdmsa.model.RFC;
-import dsd.api.cdmsa.repository.AlternativeRepository;
-import dsd.api.cdmsa.repository.CommentRepository;
-import dsd.api.cdmsa.repository.OrganizationRepository;
-import dsd.api.cdmsa.repository.RfcRepository;
-import dsd.api.cdmsa.repository.TemplateRepository;
-import dsd.api.cdmsa.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -37,13 +26,13 @@ import lombok.RequiredArgsConstructor;
 public class RfcService {
     // Existing repositories
     private final RfcRepository rfcRepository;
+    private final AdrRepository adrRepository;
     private final UserRepository userRepository;
     private final TemplateRepository templateRepository;
     private final OrganizationRepository organizationRepository;
     private final AlternativeRepository alternativeRepository;
     private final CommentRepository commentRepository;
-
-    private final AdrService adrService;
+    private final VoteRepository voteRepository;
 
     @Transactional
     public RfcResponse postCommentToRfc(Long rfcId, Long userId, CreateCommentRequest request) {
@@ -186,34 +175,39 @@ public class RfcService {
     }
 
     private RfcResponse toDetailedResponse(RFC rfc) {
+
         List<AlternativeResponse> alts = alternativeRepository.findByRfcId(rfc.getId()).stream()
-                .map(AlternativeResponse::fromEntity)
+                .map(alt -> {
+                    int yesCount = voteRepository.countByAlternativeAndOutcome(alt, true);
+                    int noCount = voteRepository.countByAlternativeAndOutcome(alt, false);
+                    return AlternativeResponse.fromEntityVotes(alt, yesCount, noCount);
+                })
                 .collect(Collectors.toList());
 
-    List<CommentResponse> comments = commentRepository.findByRfcId(rfc.getId()).stream()
-        .map(c -> new CommentResponse(
-            c.getId(),
-            c.getAuthor() != null ? c.getAuthor().getId() : null,
-            c.getAuthor() != null ? c.getAuthor().getEmail() : null, //Before getUsernam
-            c.getContent(),
-            c.getCreatedAt(),
-            c.getUpdatedAt()
-        ))
-        .collect(Collectors.toList());
+        List<CommentResponse> comments = commentRepository.findByRfcId(rfc.getId()).stream()
+            .map(c -> new CommentResponse(
+                c.getId(),
+                c.getAuthor() != null ? c.getAuthor().getId() : null,
+                c.getAuthor() != null ? c.getAuthor().getEmail() : null, //Before getUsernam
+                c.getContent(),
+                c.getCreatedAt(),
+                c.getUpdatedAt()
+            ))
+            .collect(Collectors.toList());
 
-    return new RfcResponse(
-        rfc.getId(),
-        rfc.getTitle(),
-        rfc.getDescription(),
-        rfc.getUser() != null ? rfc.getUser().getId() : null,
-        rfc.getUser() != null ? rfc.getUser().getFirstname() : null, // Before getName
-        rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
-        rfc.getOrg() != null ? rfc.getOrg().getId() : null,
-        rfc.getStatus(),
-        rfc.getCreatedAt(),
-        rfc.getUpdatedAt(),
-        alts,
-        comments);
+        return new RfcResponse(
+            rfc.getId(),
+            rfc.getTitle(),
+            rfc.getDescription(),
+            rfc.getUser() != null ? rfc.getUser().getId() : null,
+            rfc.getUser() != null ? rfc.getUser().getFirstname() : null, // Before getName
+            rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
+            rfc.getOrg() != null ? rfc.getOrg().getId() : null,
+            rfc.getStatus(),
+            rfc.getCreatedAt(),
+            rfc.getUpdatedAt(),
+            alts,
+            comments);
     }
 
     // ---------- Alternatives (POST & GET) ----------
@@ -276,8 +270,29 @@ public class RfcService {
         }
 
         return alternativeRepository.findByRfcId(rfcId).stream()
-                .map(AlternativeResponse::fromEntity)
-                .toList();
+                .map(alt -> {
+                    int yesCount = voteRepository.countByAlternativeAndOutcome(alt, true);
+                    int noCount = voteRepository.countByAlternativeAndOutcome(alt, false);
+                    return AlternativeResponse.fromEntityVotes(alt, yesCount, noCount);
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * List alternatives but only if the RFC belongs to the given organization.
+     */
+    @Transactional(readOnly = true)
+    public List<AlternativeResponse> listAlternativesForOrg(Long rfcId, Long orgId) {
+        if (!rfcRepository.existsByIdAndOrgId(rfcId, orgId)) {
+            throw new RfcNotFoundException("RFC not found with id " + rfcId);
+        }
+        return alternativeRepository.findByRfcId(rfcId).stream()
+                .map(alt -> {
+                    int yesCount = voteRepository.countByAlternativeAndOutcome(alt, true);
+                    int noCount = voteRepository.countByAlternativeAndOutcome(alt, false);
+                    return AlternativeResponse.fromEntityVotes(alt, yesCount, noCount);
+                })
+                .collect(Collectors.toList());
     }
 
     /**
@@ -318,10 +333,13 @@ public class RfcService {
 
             rfc.setStatus(RFC.Status.CLOSED_DECIDED);
             // Link winning alternative
-            // rfc.setWinningAlternative(winningAlt);
+            // rfc.setWinningAlternative(winningAlt);  maybe cool to have?
 
-            // ADR adr = adrService.createDraftFromRfcAndAlternative(rfc, winningAlt);
-            // rfc.setAdr(adr);
+
+            ADR adr = adrRepository.findByRfcId(rfcId)
+                    .orElseThrow(() -> new RfcNotFoundException("ADR not found for this RFC"));
+
+            rfc.setAdr(adr);
         }
         // Case 2: closed without alternative (US-23)
         else {
@@ -331,6 +349,49 @@ public class RfcService {
 
         RFC saved = rfcRepository.save(rfc);
         return toResponse(saved);
+    }
+
+    @Transactional
+    public VoteResponse voteForAlternative(Long altId, Long userId, boolean outcome) {
+        Alternative alternative = alternativeRepository.findById(altId)
+                .orElseThrow(() -> new EntityNotFoundException("Alternative not found"));
+
+        User voter = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        Optional<Vote> existing = voteRepository.findByAlternativeAndVoter(alternative, voter);
+
+
+        if (existing.isPresent()) {
+            Vote vote = existing.get();
+
+            // delete vote if u click on the same thumb
+            if (vote.getOutcome() != null && vote.getOutcome().equals(outcome)) {
+                voteRepository.delete(vote);
+                int yesCount = voteRepository.countByAlternativeAndOutcome(alternative, true);
+                int noCount = voteRepository.countByAlternativeAndOutcome(alternative, false);
+
+                return new VoteResponse(yesCount, noCount);
+            }
+
+            // change vote instead
+            vote.setOutcome(outcome);
+            voteRepository.save(vote);
+            int yesCount = voteRepository.countByAlternativeAndOutcome(alternative, true);
+            int noCount = voteRepository.countByAlternativeAndOutcome(alternative, false);
+
+            return new VoteResponse(yesCount, noCount);
+        }
+
+        // no existing vote
+        Vote newVote = new Vote();
+        newVote.setAlternative(alternative);
+        newVote.setVoter(voter);
+        newVote.setOutcome(outcome);
+        voteRepository.save(newVote);
+        int yesCount = voteRepository.countByAlternativeAndOutcome(alternative, true);
+        int noCount = voteRepository.countByAlternativeAndOutcome(alternative, false);
+        return new VoteResponse(yesCount, noCount);
     }
 
 }

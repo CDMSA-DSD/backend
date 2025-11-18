@@ -1,6 +1,7 @@
 package dsd.api.cdmsa.controller;
 
-import dsd.api.cdmsa.dto.CreateCommentRequest;
+import dsd.api.cdmsa.dto.*;
+import dsd.api.cdmsa.service.LLMService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,11 +13,6 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-import dsd.api.cdmsa.dto.AlternativeResponse;
-import dsd.api.cdmsa.dto.CloseRfcRequest;
-import dsd.api.cdmsa.dto.CreateAlternativeRequest;
-import dsd.api.cdmsa.dto.CreateRfcRequest;
-import dsd.api.cdmsa.dto.RfcResponse;
 import dsd.api.cdmsa.service.RfcService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -36,6 +32,7 @@ import lombok.RequiredArgsConstructor;
 public class RfcController {
 
     private final RfcService rfcService;
+    private final LLMService llmService;
 
      private UserPrincipal getAuthenticatedPrincipal() {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -175,4 +172,30 @@ public class RfcController {
         RfcResponse response = rfcService.closeRfc(rfcId, userId, request);
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/alternatives/{altId}/vote")
+    public ResponseEntity<VoteResponse> voteForAlternative(
+            @PathVariable Long altId,
+            @RequestBody VoteRequest voteRequest,
+            HttpServletRequest httpRequest) {
+
+        // check if user is a reviewer, probably we need also the rfcId to see status = under review
+        Long userId = getCurrentUserId(httpRequest);
+
+        VoteResponse resp = rfcService.voteForAlternative(altId, userId, voteRequest.outcome());
+
+        return ResponseEntity.ok(resp);
+    }
+
+    // generate ADR of the RFC using LLM
+    @PostMapping("/{rfcId}/generateadr")
+    public ResponseEntity<GenerateAdrResponse> createDraftFromRfcAndAlternative(
+            @PathVariable Long rfcId,
+            @RequestBody GenerateAdrRequest request,
+            HttpServletRequest httpRequest) {
+        Long userId = getCurrentUserId(httpRequest);
+        GenerateAdrResponse response = llmService.createDraftFromRfcAndAlternative(rfcId, userId, request);
+        return ResponseEntity.ok(response);
+    }
+
 }

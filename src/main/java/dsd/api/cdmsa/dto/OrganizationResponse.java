@@ -6,7 +6,9 @@ public record OrganizationResponse(
         Long id,
         @NotBlank(message = "Username cannot be blank") String companyName,
         String description,
-        String domain //,
-        // String gitHubToken
+        String domain,
+        String selectedRepoName,
+        String selectedBranchName,
+        String repoOwner
         ) {
 }
