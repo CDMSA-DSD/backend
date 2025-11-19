@@ -295,19 +295,6 @@ public class RfcService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * List alternatives but only if the RFC belongs to the given organization.
-     */
-    @Transactional(readOnly = true)
-    public List<AlternativeResponse> listAlternativesForOrg(Long rfcId, Long orgId) {
-        if (!rfcRepository.existsByIdAndOrgId(rfcId, orgId)) {
-            throw new RfcNotFoundException("RFC not found with id " + rfcId);
-        }
-        return alternativeRepository.findByRfcId(rfcId).stream()
-                .map(AlternativeResponse::fromEntity)
-                .toList();
-    }
-
     @Transactional
     public RfcResponse closeRfc(Long rfcId, Long userId, CloseRfcRequest request) {
         RFC rfc = rfcRepository.findById(rfcId)

@@ -112,17 +112,6 @@ public class AdrController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PostMapping("/publish")
-    public ResponseEntity<AdrResponse> publishAdr(@Valid @RequestBody PublishAdrRequest request, HttpServletRequest httpRequest) {
-        // TO DO - check if user is logged in ...
-        Long userId = getCurrentUserId(httpRequest);
-
-        // build the markdown file from form, push it on GitHub through API, store it in the db (the url)
-        AdrResponse response = adrService.publishAdr(request, userId);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
     /* it is necessary?
 
     public ADR createDraftFromRfcAndAlternative(RFC rfc, Alternative alternative) {

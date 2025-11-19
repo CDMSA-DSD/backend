@@ -1,5 +1,7 @@
 package dsd.api.cdmsa.controller;
 
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -7,13 +9,19 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.web.PagedResourcesAssembler;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.PagedModel;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import dsd.api.cdmsa.assembler.OrgModelAssembler;
 import dsd.api.cdmsa.dto.OrganizationResponse;
+import dsd.api.cdmsa.dto.OrganizationResponseAlt;
 import dsd.api.cdmsa.model.Organization;
 import dsd.api.cdmsa.model.UserPrincipal;
 import dsd.api.cdmsa.service.OrgService;
+import dsd.api.cdmsa.dto.*;
+import dsd.api.cdmsa.exception.UserNotFoundException;
 
+import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 
 @RestController
@@ -22,7 +30,7 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class OrgController {
 
-    private final OrgService service;
+    private final OrgService orgService;
 
     private OrgModelAssembler orgModelAssembler;
     private PagedResourcesAssembler<Organization> pagedResourcesAssembler;
@@ -47,18 +55,18 @@ public class OrgController {
 
     // GET Org (individual)
     @GetMapping(value = "/{id}")
-    public ResponseEntity<EntityModel<OrganizationResponse>> getOrg(@PathVariable Long id) {
-        Organization org = service.getOrgDetails(id);
+    public ResponseEntity<EntityModel<OrganizationResponseAlt>> getOrg(@PathVariable Long id) {
+        Organization org = orgService.getOrgDetailsAlt(id);
         return ResponseEntity.ok(orgModelAssembler.toModel(org));
     }
 
-    @GetMapping
-    public ResponseEntity<PagedModel<EntityModel<OrganizationResponse>>> getAllUsers(
+    @GetMapping("/users")
+    public ResponseEntity<PagedModel<EntityModel<OrganizationResponseAlt>>> getAllUsers(
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam(defaultValue = "0", required = false) int page,
             @RequestParam(defaultValue = "2", required = false) int size) {
 
-        Page<Organization> orgs = service.findAllOrgs(principal.getOrgId(), page, size);
+        Page<Organization> orgs = orgService.findAllOrgs(principal.getOrgId(), page, size);
         return ResponseEntity.ok(pagedResourcesAssembler.toModel(orgs, orgModelAssembler));
     }
 

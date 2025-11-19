@@ -3,11 +3,20 @@ package dsd.api.cdmsa.service;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 
 import java.util.Map;
+import java.util.List;
+import java.util.Arrays;
 
 import org.springframework.data.domain.*;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.core.context.SecurityContextHolder;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import dsd.api.cdmsa.controller.UserController;
 import dsd.api.cdmsa.dto.OrgAdminRequest;
@@ -17,10 +26,14 @@ import dsd.api.cdmsa.dto.SignInRequest;
 import dsd.api.cdmsa.dto.UpdateOrganizationRequest;
 import dsd.api.cdmsa.exception.OrgExistsException;
 import dsd.api.cdmsa.exception.OrgNotFoundException;
+import dsd.api.cdmsa.exception.UserNotFoundException;
 import dsd.api.cdmsa.model.Organization;
 import dsd.api.cdmsa.model.User;
 import dsd.api.cdmsa.repository.OrganizationRepository;
+import dsd.api.cdmsa.repository.UserRepository;
+import dsd.api.cdmsa.dto.*;
 
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 
 @Service
@@ -28,6 +41,7 @@ import lombok.AllArgsConstructor;
 public class OrgService {
 
     private final OrganizationRepository orgRepo;
+    private final UserRepository userRepo;
     private final UserService userService;
 
     public boolean existOrg(String name) {
@@ -111,9 +125,13 @@ public class OrgService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public Organization getOrgDetailsAlt(Long orgId) {
+        return orgRepo.findById(orgId).orElseThrow(() -> new OrgNotFoundException(orgId));
+    }
+
     @Transactional
     public OrganizationResponse updateOrgDetails(Long id, UpdateOrganizationRequest request) {
-
         User user = userRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         Organization org = user.getOrg();
@@ -133,7 +151,7 @@ public class OrgService {
                 updatedOrg.getSelectedBranchName(),
                 updatedOrg.getRepoOwner()
         );
-    }
+}
 
     @Transactional
     public ConnectGitHubResponse connectGitHub (Long userId, ConnectGitHubRequest request){

@@ -38,7 +38,7 @@ public record AlternativeResponse(
                 alternative.getPros(),
                 alternative.getCons(),
                 alternative.getAuthor() != null ? alternative.getAuthor().getId() : null,
-                alternative.getAuthor() != null ? alternative.getAuthor().getName() : null,
+                alternative.getAuthor() != null ? alternative.getAuthor().getFirstname() : null,
                 alternative.getCreatedAt(),
                 alternative.getUpdatedAt(), yes, no);
     }
