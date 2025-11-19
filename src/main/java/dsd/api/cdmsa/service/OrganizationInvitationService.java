@@ -50,7 +50,7 @@ public class OrganizationInvitationService {
 
         return new LinkResponse(
                 invitation.getId(),
-                frontendBaseUrl + "/auth/register-invitation?token=" + token,
+                frontendBaseUrl + "/accept-invitation?token=" + token,
                 invitation.getExpiresAt(),
                 invitation.getState());
     }
