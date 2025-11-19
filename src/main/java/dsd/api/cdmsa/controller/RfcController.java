@@ -111,11 +111,12 @@ public class RfcController {
      * Returns a specific RFC by its ID.
      */
     @GetMapping("/{rfcId}")
-    public ResponseEntity<RfcResponse> getRfcById(
+    public ResponseEntity<RfcSpecificResponse> getRfcById(
             @PathVariable Long rfcId,
             HttpServletRequest httpRequest) {
+        Long userId = getCurrentUserId(httpRequest);
         Long orgId = getCurrentUserOrgId(httpRequest);
-        RfcResponse response = rfcService.getRfcByIdForOrg(rfcId, orgId);
+        RfcSpecificResponse response = rfcService.getRfcByIdForOrg(rfcId, orgId, userId);
         return ResponseEntity.ok(response);
     }
 

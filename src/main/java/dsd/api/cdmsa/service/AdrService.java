@@ -3,6 +3,7 @@ package dsd.api.cdmsa.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dsd.api.cdmsa.dto.AdrResponse;
+import dsd.api.cdmsa.dto.AdrSpecificResponse;
 import dsd.api.cdmsa.dto.CreateAdrRequest;
 import dsd.api.cdmsa.dto.PublishAdrRequest;
 import dsd.api.cdmsa.dto.UpdateAdrRequest;
@@ -103,11 +104,14 @@ public class AdrService {
     // ===================== Org-aware methods =====================
 
     @Transactional(readOnly = true)
-    public AdrResponse getAdrByIdForOrg(Long id, Long orgId) {
+    public AdrSpecificResponse getAdrByIdForOrg(Long id, Long orgId, Long userId) {
         ADR adr = adrRepository.findByIdAndRfc_Org_Id(id, orgId)
                 .orElseThrow(() -> new EntityNotFoundException("ADR not found with id " + id));
 
-        return new AdrResponse(
+        boolean author = adr.getRfc().getUser().getId().equals(userId);
+        System.out.println("Is user " + userId + " the author of the ADR? " + author);
+
+        return new AdrSpecificResponse(
                 adr.getId(),
                 adr.getTitle(),
                 adr.getContext(),
@@ -115,6 +119,7 @@ public class AdrService {
                 adr.getConsequences(),
                 adr.getStatus(),
                 adr.getRfc().getId(),
+                author,
                 adr.getCreatedAt(),
                 adr.getUpdatedAt(),
                 adr.getGitHubUrl()          // null until i approve the adr

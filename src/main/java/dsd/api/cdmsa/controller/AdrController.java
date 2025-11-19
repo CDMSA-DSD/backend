@@ -1,6 +1,7 @@
 package dsd.api.cdmsa.controller;
 
 import dsd.api.cdmsa.dto.AdrResponse;
+import dsd.api.cdmsa.dto.AdrSpecificResponse;
 import dsd.api.cdmsa.dto.CreateAdrRequest;
 import dsd.api.cdmsa.dto.PublishAdrRequest;
 import dsd.api.cdmsa.service.AdrService;
@@ -75,10 +76,11 @@ public class AdrController {
 
     // Get a specific ADR from its id
     @GetMapping("/{id}")
-    public ResponseEntity<AdrResponse> getAdrById(@PathVariable Long id, HttpServletRequest httpRequest) {
+    public ResponseEntity<AdrSpecificResponse> getAdrById(@PathVariable Long id, HttpServletRequest httpRequest) {
+        Long userId = getCurrentUserId(httpRequest);
         Long orgId = getCurrentUserOrgId(httpRequest);
 
-        AdrResponse response = adrService.getAdrByIdForOrg(id, orgId);
+        AdrSpecificResponse response = adrService.getAdrByIdForOrg(id, orgId, userId);
         return ResponseEntity.ok(response);
     }
 

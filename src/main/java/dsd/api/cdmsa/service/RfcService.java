@@ -152,10 +152,26 @@ public class RfcService {
      * ensure organization-scoped access to RFC details.
      */
     @Transactional(readOnly = true)
-    public RfcResponse getRfcByIdForOrg(Long rfcId, Long orgId) {
+    public RfcSpecificResponse getRfcByIdForOrg(Long rfcId, Long orgId, Long userId) {
         RFC rfc = rfcRepository.findByIdAndOrgId(rfcId, orgId)
                 .orElseThrow(() -> new RfcNotFoundException("RFC not found with id " + rfcId));
-        return toDetailedResponse(rfc);
+        RfcResponse detailedRfc = toDetailedResponse(rfc);
+        // Determine if the requesting user is the author of the RFC
+        boolean isAuthor = rfc.getUser().getId().equals(userId);
+        return new RfcSpecificResponse(
+            rfc.getId(),
+            rfc.getTitle(),
+            rfc.getDescription(),
+            rfc.getUser() != null ? rfc.getUser().getId() : null,
+            rfc.getUser() != null ? rfc.getUser().getFirstname() : null, //Before getName
+            rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
+            rfc.getOrg() != null ? rfc.getOrg().getId() : null,
+            rfc.getStatus(),
+            rfc.getCreatedAt(),
+            rfc.getUpdatedAt(),
+            isAuthor,
+            detailedRfc.alternatives(),
+            detailedRfc.comments());
     }
 
     private RfcResponse toResponse(RFC rfc) {
