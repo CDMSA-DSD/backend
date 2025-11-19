@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 import dsd.api.cdmsa.assembler.OrgModelAssembler;
 import dsd.api.cdmsa.assembler.UserModelAssembler;
-import dsd.api.cdmsa.dto.OrganizationResponse;
+import dsd.api.cdmsa.dto.OrganizationResponseAlt;
 import dsd.api.cdmsa.dto.UserResponse;
 import dsd.api.cdmsa.model.Organization;
 import dsd.api.cdmsa.model.User;
@@ -36,11 +36,12 @@ public class MeController {
     }
 
     @GetMapping("/org")
-    public ResponseEntity<EntityModel<OrganizationResponse>> getMyOrganization(
+    public ResponseEntity<EntityModel<OrganizationResponseAlt>> getMyOrganization(
             @AuthenticationPrincipal UserPrincipal principal) {
 
-        Organization org = orgService.getOrgDetails(principal.getOrgId());
+        Organization org = orgService.getOrgDetailsAlt(principal.getOrgId());
 
         return ResponseEntity.ok(orgModelAssembler.toModel(org));
     }
+
 }

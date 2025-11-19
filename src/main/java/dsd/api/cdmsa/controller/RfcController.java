@@ -1,6 +1,7 @@
 package dsd.api.cdmsa.controller;
 
-import dsd.api.cdmsa.dto.CreateCommentRequest;
+import dsd.api.cdmsa.dto.*;
+import dsd.api.cdmsa.service.LLMService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,13 +13,12 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-import dsd.api.cdmsa.dto.AlternativeResponse;
-import dsd.api.cdmsa.dto.CloseRfcRequest;
-import dsd.api.cdmsa.dto.CreateAlternativeRequest;
-import dsd.api.cdmsa.dto.CreateRfcRequest;
-import dsd.api.cdmsa.dto.RfcResponse;
 import dsd.api.cdmsa.service.RfcService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.core.context.SecurityContextHolder;
+import dsd.api.cdmsa.exception.*;
+
+import dsd.api.cdmsa.model.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -32,20 +32,39 @@ import lombok.RequiredArgsConstructor;
 public class RfcController {
 
     private final RfcService rfcService;
+    private final LLMService llmService;
+
+     private UserPrincipal getAuthenticatedPrincipal() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof UserPrincipal) {
+            return (UserPrincipal) principal;
+        }
+        throw new UserNotFoundException("anonymous");
+    }
+
+    private Long getCurrentUserId(HttpServletRequest request) {
+        try {
+            return getAuthenticatedPrincipal().getUser().getId();
+        } catch (UserNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new UserNotFoundException("anonymous");
+        }
+    }
 
     /**
-     * Retrieves the current user id from the request.
-     * For this sprint we use a simple header-based approach ("X-User-Id"),
-     * which should be replaced by a proper authentication mechanism later.
+     * Returns the organization id for the current authenticated user.
      */
-    private Long getCurrentUserId(HttpServletRequest request) {
-        String header = request.getHeader("X-User-Id");
-        if (header == null || header.isBlank()) {
-            // For development/demo purposes only.
-            // In production, this must be replaced by authenticated user context.
-            return 1L;
+    private Long getCurrentUserOrgId(HttpServletRequest request) {
+        try {
+            Long orgId = getAuthenticatedPrincipal().getOrgId();
+            if (orgId != null) return orgId;
+            throw new OrgNotFoundException(0L);
+        } catch (OrgNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new OrgNotFoundException(0L);
         }
-        return Long.parseLong(header);
     }
 
     // post a new comment under the rfc identified by id
@@ -69,7 +88,8 @@ public class RfcController {
             @RequestBody CreateRfcRequest request,
             HttpServletRequest httpRequest) {
         Long userId = getCurrentUserId(httpRequest);
-        RfcResponse response = rfcService.createRfc(userId, request);
+        Long orgId = getCurrentUserOrgId(httpRequest);
+        RfcResponse response = rfcService.createRfc(userId, orgId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -81,17 +101,22 @@ public class RfcController {
      */
     @GetMapping
     public Page<RfcResponse> listRfcs(
-            @PageableDefault(size = 20) Pageable pageable) {
-        return rfcService.listRfcs(pageable);
+            @PageableDefault(size = 20) Pageable pageable,
+            HttpServletRequest httpRequest) {
+        Long orgId = getCurrentUserOrgId(httpRequest);
+        return rfcService.listRfcsByOrg(orgId, pageable);
     }
 
     /**
      * Returns a specific RFC by its ID.
      */
     @GetMapping("/{rfcId}")
-    public ResponseEntity<RfcResponse> getRfcById(
-            @PathVariable Long rfcId) {
-        RfcResponse response = rfcService.getRfcById(rfcId);
+    public ResponseEntity<RfcSpecificResponse> getRfcById(
+            @PathVariable Long rfcId,
+            HttpServletRequest httpRequest) {
+        Long userId = getCurrentUserId(httpRequest);
+        Long orgId = getCurrentUserOrgId(httpRequest);
+        RfcSpecificResponse response = rfcService.getRfcByIdForOrg(rfcId, orgId, userId);
         return ResponseEntity.ok(response);
     }
 
@@ -129,8 +154,11 @@ public class RfcController {
      */
     @GetMapping("/{rfcId}/alternatives")
     public ResponseEntity<List<AlternativeResponse>> listAlternatives(
-            @PathVariable Long rfcId) {
-        List<AlternativeResponse> alternatives = rfcService.listAlternatives(rfcId);
+            @PathVariable Long rfcId,
+            HttpServletRequest httpRequest) {
+        // ensure alternatives are only returned for RFCs in the same organization
+        Long orgId = getCurrentUserOrgId(httpRequest);
+        List<AlternativeResponse> alternatives = rfcService.listAlternativesForOrg(rfcId, orgId);
         return ResponseEntity.ok(alternatives);
     }
 
@@ -145,4 +173,30 @@ public class RfcController {
         RfcResponse response = rfcService.closeRfc(rfcId, userId, request);
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/alternatives/{altId}/vote")
+    public ResponseEntity<VoteResponse> voteForAlternative(
+            @PathVariable Long altId,
+            @RequestBody VoteRequest voteRequest,
+            HttpServletRequest httpRequest) {
+
+        // check if user is a reviewer, probably we need also the rfcId to see status = under review
+        Long userId = getCurrentUserId(httpRequest);
+
+        VoteResponse resp = rfcService.voteForAlternative(altId, userId, voteRequest.outcome());
+
+        return ResponseEntity.ok(resp);
+    }
+
+    // generate ADR of the RFC using LLM
+    @PostMapping("/{rfcId}/generateadr")
+    public ResponseEntity<GenerateAdrResponse> createDraftFromRfcAndAlternative(
+            @PathVariable Long rfcId,
+            @RequestBody GenerateAdrRequest request,
+            HttpServletRequest httpRequest) {
+        Long userId = getCurrentUserId(httpRequest);
+        GenerateAdrResponse response = llmService.createDraftFromRfcAndAlternative(rfcId, userId, request);
+        return ResponseEntity.ok(response);
+    }
+
 }

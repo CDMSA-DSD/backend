@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import dsd.api.cdmsa.dto.LoginRequest;
+import dsd.api.cdmsa.dto.LoginResponse;
 import dsd.api.cdmsa.dto.OrgAdminRequest;
 import dsd.api.cdmsa.dto.OrgAdminResponse;
 import dsd.api.cdmsa.dto.SignInRequest;
@@ -47,7 +48,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public String login(@RequestBody LoginRequest user) {
-        return userService.verify(user); // Return JWT token con dto or cookie
+    public LoginResponse login(@RequestBody LoginRequest user) {
+        return  userService.login(user);
     }
 }

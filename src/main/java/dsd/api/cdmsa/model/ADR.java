@@ -32,6 +32,9 @@ public class ADR {
     @Column(length = 4000)
     private String consequences;
 
+    @Column(length = 4000)
+    private String gitHubUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private Status status = Status.DRAFT;

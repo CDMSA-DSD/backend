@@ -30,6 +30,18 @@ public class Organization extends RepresentationModel<Organization>{
     @Column
     private String description;
 
+    @Column
+    private String gitHubToken;
+
+    @Column
+    private String selectedRepoName;
+
+    @Column
+    private String selectedBranchName;
+
+    @Column
+    private String repoOwner;
+
     @OneToOne
     @JoinColumn(name = "admin_user_id", unique = true)
     private User adminUser;
