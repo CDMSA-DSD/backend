@@ -10,21 +10,21 @@ import org.springframework.stereotype.Component;
 
 import dsd.api.cdmsa.controller.OrgController;
 import dsd.api.cdmsa.controller.UserController;
-import dsd.api.cdmsa.dto.OrganizationResponse;
+import dsd.api.cdmsa.dto.OrganizationResponseAlt;
 import dsd.api.cdmsa.mapper.OrgMapper;
 import dsd.api.cdmsa.model.Organization;
 
 @Component
 public class OrgModelAssembler
-        implements RepresentationModelAssembler<Organization, EntityModel<OrganizationResponse>> {
+        implements RepresentationModelAssembler<Organization, EntityModel<OrganizationResponseAlt>> {
 
     @Override
     @NonNull
-    public EntityModel<OrganizationResponse> toModel(Organization org) {
+    public EntityModel<OrganizationResponseAlt> toModel(Organization org) {
 
-        OrganizationResponse dto = OrgMapper.toDto(org);
+        OrganizationResponseAlt dto = OrgMapper.toDto(org);
 
-        EntityModel<OrganizationResponse> model = EntityModel.of(dto,
+        EntityModel<OrganizationResponseAlt> model = EntityModel.of(dto,
                 // self link: GET /orgs/{id}
                 linkTo(methodOn(OrgController.class).getOrg(org.getId())).withSelfRel());
 
