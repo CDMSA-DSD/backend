@@ -29,17 +29,12 @@ public class JWTService {
 
     // Generate a JWT with username as the subject
     public String generateToken(User user) {
-        System.out.println("GENERANDO TOKEN...");
-        System.out.println("USER EMAIL: " + user.getEmail());
-        System.out.println("USER ORG: " + user.getOrg().getName());
         
         Map<String, Object> claims = Map.of(
             "userId", user.getId(),
             "email", user.getEmail(),
             "orgId", user.getOrg().getId()
         );
-
-        System.out.println("TOKEN GENERADO");
 
         return Jwts.builder()
                 .claims()

@@ -1,5 +1,6 @@
 package dsd.api.cdmsa.model;
 
+import java.time.Instant;
 import java.util.ArrayList;
 
 import org.springframework.hateoas.RepresentationModel;
@@ -42,6 +43,9 @@ public class User extends RepresentationModel<User> {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(nullable = false)
+    private Instant joinedAt;
+
     @OneToMany(mappedBy = "user")
     private java.util.List<RFC> rfcs = new ArrayList<>();
 
@@ -57,4 +61,8 @@ public class User extends RepresentationModel<User> {
     @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.Set<Alternative> alternatives = new java.util.HashSet<>();
 
+    @PrePersist
+    protected void onCreate() {
+        this.joinedAt = Instant.now();
+    }
 }
