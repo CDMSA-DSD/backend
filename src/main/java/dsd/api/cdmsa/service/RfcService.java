@@ -169,19 +169,22 @@ public class RfcService {
     }
 
     private RfcResponse toResponse(RFC rfc) {
-    return new RfcResponse(
-        rfc.getId(),
-        rfc.getTitle(),
-        rfc.getDescription(),
-        rfc.getUser() != null ? rfc.getUser().getId() : null,
-        rfc.getUser() != null ? rfc.getUser().getFirstname() : null, //Before getName
-        rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
-        rfc.getOrg() != null ? rfc.getOrg().getId() : null,
-        rfc.getStatus(),
-        rfc.getCreatedAt(),
-        rfc.getUpdatedAt(),
-        java.util.List.of(), // lightweight list for summary
-        java.util.List.of());
+        // Compute comment count (may load comments; acceptable for page sizes)
+        int count = commentRepository.findByRfcId(rfc.getId()).size();
+        return new RfcResponse(
+                rfc.getId(),
+                rfc.getTitle(),
+                rfc.getDescription(),
+                rfc.getUser() != null ? rfc.getUser().getId() : null,
+                rfc.getUser() != null ? rfc.getUser().getFirstname() : null, //Before getName
+                rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
+                rfc.getOrg() != null ? rfc.getOrg().getId() : null,
+                rfc.getStatus(),
+                rfc.getCreatedAt(),
+                rfc.getUpdatedAt(),
+                (long) count,
+                java.util.List.of(), // lightweight list for summary
+                java.util.List.of());
     }
 
     private RfcResponse toDetailedResponse(RFC rfc) {
@@ -221,9 +224,10 @@ public class RfcService {
                 rfc.getOrg() != null ? rfc.getOrg().getId() : null,
                 rfc.getStatus(),
                 rfc.getCreatedAt(),
-                rfc.getUpdatedAt(),
-                alts,
-                threaded);
+            rfc.getUpdatedAt(),
+            (long) comments.size(),
+            alts,
+            threaded);
     }
 
     private CommentResponse buildThreaded(Comment comment, Map<Long, List<Comment>> childrenMap) {
