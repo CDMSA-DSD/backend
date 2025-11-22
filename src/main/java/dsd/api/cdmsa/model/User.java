@@ -2,6 +2,9 @@ package dsd.api.cdmsa.model;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import org.springframework.hateoas.RepresentationModel;
 
@@ -47,19 +50,22 @@ public class User extends RepresentationModel<User> {
     private Instant joinedAt;
 
     @OneToMany(mappedBy = "user")
-    private java.util.List<RFC> rfcs = new ArrayList<>();
+    private List<RFC> rfcs = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private java.util.Set<Observer> observers = new java.util.HashSet<>();
+    private Set<Observer> observers = new java.util.HashSet<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private java.util.Set<Reviewer> reviewers = new java.util.HashSet<>();
+    private Set<Reviewer> reviewers = new java.util.HashSet<>();
 
     @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
-    private java.util.Set<Comment> comment = new java.util.HashSet<>();
+    private Set<Comment> comment = new java.util.HashSet<>();
 
     @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
-    private java.util.Set<Alternative> alternatives = new java.util.HashSet<>();
+    private Set<Alternative> alternatives = new java.util.HashSet<>();
+
+    @OneToMany(mappedBy = "createdBy", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<OrganizationInvitation> invitations = new HashSet<>();
 
     @PrePersist
     protected void onCreate() {

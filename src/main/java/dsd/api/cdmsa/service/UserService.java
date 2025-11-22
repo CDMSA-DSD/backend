@@ -12,10 +12,12 @@ import org.springframework.stereotype.Service;
 
 import dsd.api.cdmsa.dto.ContextByAdminResponse;
 import dsd.api.cdmsa.dto.LoginRequest;
+import dsd.api.cdmsa.dto.SignInRequest;
 import dsd.api.cdmsa.dto.LoginResponse;
 import dsd.api.cdmsa.dto.UserResponse;
 import dsd.api.cdmsa.exception.UserExistsException;
 import dsd.api.cdmsa.exception.UserNotFoundException;
+import dsd.api.cdmsa.model.OrganizationInvitation;
 import dsd.api.cdmsa.mapper.UserMapper;
 import dsd.api.cdmsa.model.User;
 import dsd.api.cdmsa.model.UserPrincipal;
@@ -28,6 +30,7 @@ import lombok.AllArgsConstructor;
 public class UserService {
 
     private final JWTService jwtService;
+    private final OrganizationInvitationService invitationService;
     private final ContextService contextService;
 
     private final AuthenticationManager authManager;
@@ -51,6 +54,22 @@ public class UserService {
         throw new UserExistsException(user.getFirstname() + " " + user.getLastname());
     }
 
+     public User createUserByInvitation(SignInRequest registration, String token) {
+        
+
+        OrganizationInvitation invitation = invitationService.getInvitationByToken(token); // retrive invitation with that id and token
+
+         // Creates the user (set all the parameters)
+            User user = new User();
+            user.setFirstname(registration.firstname());
+            user.setLastname(registration.lastname());
+            user.setEmail(registration.email());
+            user.setPassword(registration.password()); // Hashed later in createUser
+            user.setOrg(invitation.getOrg());
+
+        return createUser(user);
+    }
+
     public LoginResponse login(LoginRequest login) {
         Authentication authentication = authManager
                 .authenticate(new UsernamePasswordAuthenticationToken(login.email(), login.password()));
@@ -64,6 +83,20 @@ public class UserService {
 
             UserResponse dto = UserMapper.toDto(user);
             return new LoginResponse(dto, token, isAdmin, contextsIsAdmin);
+
+        } else {
+            throw new InvalidParameterException();
+        }
+    }
+
+    public String verify(LoginRequest login) {
+        Authentication authentication = authManager
+                .authenticate(new UsernamePasswordAuthenticationToken(login.email(), login.password()));
+
+        if (authentication.isAuthenticated()) {
+            UserPrincipal authUser = (UserPrincipal) authentication.getPrincipal();
+            User user = authUser.getUser();
+            return jwtService.generateToken(user);
 
         } else {
             throw new InvalidParameterException();

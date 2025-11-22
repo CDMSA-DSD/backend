@@ -1,11 +1,9 @@
 package dsd.api.cdmsa.model;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.springframework.hateoas.RepresentationModel;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
@@ -45,16 +43,16 @@ public class Organization extends RepresentationModel<Organization>{
     private String repoOwner;
 
     @OneToOne
-    @JsonIgnoreProperties({"org"})
     @JoinColumn(name = "admin_user_id", unique = true)
     private User adminUser;
 
     @OneToMany(mappedBy = "org")
-    @JsonIgnore
-    private java.util.List<User> users = new ArrayList<>();
+    private List<User> users = new ArrayList<>();
 
     @OneToMany(mappedBy = "org")
-    @JsonIgnore
-    private java.util.List<RFC> rfcs = new ArrayList<>();
+    private List<RFC> rfcs = new ArrayList<>();
+
+    @OneToMany(mappedBy = "org")
+    private List<OrganizationInvitation> organizationInvitation = new ArrayList<>();
 
 }
