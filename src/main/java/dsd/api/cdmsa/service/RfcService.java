@@ -14,7 +14,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import dsd.api.cdmsa.exception.RfcAlternativeBadRequestException;
 import dsd.api.cdmsa.exception.RfcAlternativeNotAllowedException;
 import dsd.api.cdmsa.exception.RfcBadRequestException;
@@ -38,6 +37,9 @@ public class RfcService {
 
     @Transactional
     public RfcResponse postCommentToRfc(Long rfcId, Long userId, CreateCommentRequest request) {
+        // in the future we should check that the user must be a reviewer of the RFC in
+        // order to post a comment
+        // ...
 
         RFC rfc = rfcRepository.findById(rfcId)
                 .orElseThrow(() -> new RfcNotFoundException("RFC not found"));
@@ -75,7 +77,7 @@ public class RfcService {
     // ---------- US-12: Create RFC ----------
 
     @Transactional
-    public RfcResponse createRfc(Long userId, CreateRfcRequest request) {
+    public RfcResponse createRfc(Long userId, Long orgId, CreateRfcRequest request) {
 
         // Validate request body
         if (request == null) {
@@ -90,9 +92,6 @@ public class RfcService {
         if (request.templateId() == null) {
             throw new RfcBadRequestException("TemplateId is required");
         }
-        if (request.orgId() == null) {
-            throw new RfcBadRequestException("OrgId is required");
-        }
 
         // Validate related entities
         var user = userRepository.findById(userId)
@@ -101,7 +100,7 @@ public class RfcService {
         var template = templateRepository.findById(request.templateId())
                 .orElseThrow(() -> new RfcDependencyNotFoundException("Template not found"));
 
-        var org = organizationRepository.findById(request.orgId())
+        var org = organizationRepository.findById(orgId)
                 .orElseThrow(() -> new RfcDependencyNotFoundException("Organization not found"));
 
         // Build RFC entity
@@ -124,6 +123,17 @@ public class RfcService {
                 .map(this::toResponse);
     }
 
+    /**
+     * Returns a paginated list of RFCs that belong to the specified organization.
+     * This is the org-scoped variant used by controllers to ensure users only
+     * see RFCs belonging to their organization.
+     */
+    @Transactional(readOnly = true)
+    public Page<RfcResponse> listRfcsByOrg(Long orgId, Pageable pageable) {
+        return rfcRepository.findByOrgId(orgId, pageable)
+                .map(this::toResponse);
+    }
+
     @Transactional(readOnly = true)
     public RfcResponse getRfcById(Long rfcId) {
         RFC rfc = rfcRepository.findById(rfcId)
@@ -131,20 +141,47 @@ public class RfcService {
         return toDetailedResponse(rfc);
     }
 
+    /**
+     * Returns a RFC only if it belongs to the given organization. Used to
+     * ensure organization-scoped access to RFC details.
+     */
+    @Transactional(readOnly = true)
+    public RfcSpecificResponse getRfcByIdForOrg(Long rfcId, Long orgId, Long userId) {
+        RFC rfc = rfcRepository.findByIdAndOrgId(rfcId, orgId)
+                .orElseThrow(() -> new RfcNotFoundException("RFC not found with id " + rfcId));
+        RfcResponse detailedRfc = toDetailedResponse(rfc);
+        // Determine if the requesting user is the author of the RFC
+        boolean isAuthor = rfc.getUser().getId().equals(userId);
+        return new RfcSpecificResponse(
+            rfc.getId(),
+            rfc.getTitle(),
+            rfc.getDescription(),
+            rfc.getUser() != null ? rfc.getUser().getId() : null,
+            rfc.getUser() != null ? rfc.getUser().getFirstname() : null, //Before getName
+            rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
+            rfc.getOrg() != null ? rfc.getOrg().getId() : null,
+            rfc.getStatus(),
+            rfc.getCreatedAt(),
+            rfc.getUpdatedAt(),
+            isAuthor,
+            detailedRfc.alternatives(),
+            detailedRfc.comments());
+    }
+
     private RfcResponse toResponse(RFC rfc) {
-        return new RfcResponse(
-                rfc.getId(),
-                rfc.getTitle(),
-                rfc.getDescription(),
-                rfc.getUser() != null ? rfc.getUser().getId() : null,
-                rfc.getUser() != null ? rfc.getUser().getName() : null,
-                rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
-                rfc.getOrg() != null ? rfc.getOrg().getId() : null,
-                rfc.getStatus(),
-                rfc.getCreatedAt(),
-                rfc.getUpdatedAt(),
-                java.util.List.of(), // lightweight list for summary
-                java.util.List.of());
+    return new RfcResponse(
+        rfc.getId(),
+        rfc.getTitle(),
+        rfc.getDescription(),
+        rfc.getUser() != null ? rfc.getUser().getId() : null,
+        rfc.getUser() != null ? rfc.getUser().getFirstname() : null, //Before getName
+        rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
+        rfc.getOrg() != null ? rfc.getOrg().getId() : null,
+        rfc.getStatus(),
+        rfc.getCreatedAt(),
+        rfc.getUpdatedAt(),
+        java.util.List.of(), // lightweight list for summary
+        java.util.List.of());
     }
 
     private RfcResponse toDetailedResponse(RFC rfc) {
@@ -179,7 +216,7 @@ public class RfcService {
                 rfc.getTitle(),
                 rfc.getDescription(),
                 rfc.getUser() != null ? rfc.getUser().getId() : null,
-                rfc.getUser() != null ? rfc.getUser().getName() : null,
+                rfc.getUser() != null ? rfc.getUser().getFirstname() : null, // Before getName
                 rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
                 rfc.getOrg() != null ? rfc.getOrg().getId() : null,
                 rfc.getStatus(),
@@ -201,20 +238,6 @@ public class RfcService {
 
     // ---------- Alternatives (POST & GET) ----------
 
-    /**
-     * Creates a new alternative for a given RFC.
-     *
-     * Rules:
-     * - RFC must exist.
-     * - RFC must be in UNDER_REVIEW status.
-     * - Only the RFC author is allowed to create alternatives.
-     * - title and description are required.
-     *
-     * @param rfcId   ID of the target RFC
-     * @param userId  ID of the current user (author candidate)
-     * @param request Alternative creation payload
-     * @return AlternativeResponse DTO
-     */
     @Transactional
     public AlternativeResponse addAlternative(Long rfcId, Long userId, CreateAlternativeRequest request) {
 
@@ -264,12 +287,6 @@ public class RfcService {
         return AlternativeResponse.fromEntity(saved);
     }
 
-    /**
-     * Returns all alternatives for a given RFC.
-     *
-     * @param rfcId ID of the RFC
-     * @return List of AlternativeResponse
-     */
     @Transactional(readOnly = true)
     public List<AlternativeResponse> listAlternatives(Long rfcId) {
 
@@ -278,6 +295,23 @@ public class RfcService {
             throw new RfcNotFoundException("RFC not found with id " + rfcId);
         }
 
+        return alternativeRepository.findByRfcId(rfcId).stream()
+                .map(alt -> {
+                    int yesCount = voteRepository.countByAlternativeAndOutcome(alt, true);
+                    int noCount = voteRepository.countByAlternativeAndOutcome(alt, false);
+                    return AlternativeResponse.fromEntityVotes(alt, yesCount, noCount);
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * List alternatives but only if the RFC belongs to the given organization.
+     */
+    @Transactional(readOnly = true)
+    public List<AlternativeResponse> listAlternativesForOrg(Long rfcId, Long orgId) {
+        if (!rfcRepository.existsByIdAndOrgId(rfcId, orgId)) {
+            throw new RfcNotFoundException("RFC not found with id " + rfcId);
+        }
         return alternativeRepository.findByRfcId(rfcId).stream()
                 .map(alt -> {
                     int yesCount = voteRepository.countByAlternativeAndOutcome(alt, true);
@@ -322,7 +356,7 @@ public class RfcService {
         // Case 2: closed without alternative (US-23)
         else {
             rfc.setStatus(RFC.Status.CLOSED_NON_DECIDED);
-            // Puedes guardar el motivo de cierre si tu modelo lo soporta
+
         }
 
         RFC saved = rfcRepository.save(rfc);

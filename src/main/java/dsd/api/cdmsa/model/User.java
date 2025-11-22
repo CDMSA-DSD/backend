@@ -1,23 +1,18 @@
 package dsd.api.cdmsa.model;
 
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
+import org.springframework.hateoas.RepresentationModel;
+
+import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+
+import lombok.*;
 
 @Entity // Create a table
 @Table(name = "app_users") // Name a table
@@ -25,7 +20,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+public class User extends RepresentationModel<User> {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -34,13 +29,13 @@ public class User {
     @JoinColumn(name = "org_id", nullable = false)
     private Organization org;
 
-    @NotBlank(message = "Name is mandatory")
+    @NotBlank(message = "First name is mandatory")
     @Column(nullable = false)
-    private String name;
+    private String firstname;
 
-    @NotBlank(message = "Username is mandatory")
+    @NotBlank(message = "Last name is mandatory")
     @Column(nullable = false)
-    private String username;
+    private String lastname;
 
     @NotBlank(message = "Password is mandatory")
     @Column(nullable = false)
@@ -51,19 +46,29 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(nullable = false)
+    private Instant joinedAt;
+
     @OneToMany(mappedBy = "user")
-    private java.util.List<RFC> rfcs = new ArrayList<>();
+    private List<RFC> rfcs = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private java.util.Set<Observer> observers = new java.util.HashSet<>();
+    private Set<Observer> observers = new java.util.HashSet<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private java.util.Set<Reviewer> reviewers = new java.util.HashSet<>();
+    private Set<Reviewer> reviewers = new java.util.HashSet<>();
 
     @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
-    private java.util.Set<Comment> comment = new java.util.HashSet<>();
+    private Set<Comment> comment = new java.util.HashSet<>();
 
     @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
-    private java.util.Set<Alternative> alternatives = new java.util.HashSet<>();
+    private Set<Alternative> alternatives = new java.util.HashSet<>();
 
+    @OneToMany(mappedBy = "createdBy", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<OrganizationInvitation> invitations = new HashSet<>();
+
+    @PrePersist
+    protected void onCreate() {
+        this.joinedAt = Instant.now();
+    }
 }

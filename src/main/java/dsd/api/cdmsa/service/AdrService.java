@@ -3,6 +3,7 @@ package dsd.api.cdmsa.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dsd.api.cdmsa.dto.AdrResponse;
+import dsd.api.cdmsa.dto.AdrSpecificResponse;
 import dsd.api.cdmsa.dto.CreateAdrRequest;
 import dsd.api.cdmsa.dto.PublishAdrRequest;
 import dsd.api.cdmsa.dto.UpdateAdrRequest;
@@ -35,12 +36,10 @@ public class AdrService {
     private final ObjectMapper objectMapper;
 
     @Transactional
-    public AdrResponse createAdr(CreateAdrRequest request, Long userId) {
-        // eventually put some checks on the request (but we used @Valid so maybe not needed) ...
-
-        RFC rfc = rfcRepository.findById(request.rfcId())
+    public AdrResponse createAdr(Long userId, Long orgId, CreateAdrRequest request) {
+        // Ensure RFC exists and belongs to user's organization
+        RFC rfc = rfcRepository.findByIdAndOrgId(request.rfcId(), orgId)
                 .orElseThrow(() -> new EntityNotFoundException("RFC not found with id " + request.rfcId()));
-
 
         ADR adr = new ADR();
         adr.setTitle(request.title().trim());
@@ -102,10 +101,51 @@ public class AdrService {
         );
     }
 
+    // ===================== Org-aware methods =====================
+
+    @Transactional(readOnly = true)
+    public AdrSpecificResponse getAdrByIdForOrg(Long id, Long orgId, Long userId) {
+        ADR adr = adrRepository.findByIdAndRfc_Org_Id(id, orgId)
+                .orElseThrow(() -> new EntityNotFoundException("ADR not found with id " + id));
+
+        boolean author = adr.getRfc().getUser().getId().equals(userId);
+        System.out.println("Is user " + userId + " the author of the ADR? " + author);
+
+        return new AdrSpecificResponse(
+                adr.getId(),
+                adr.getTitle(),
+                adr.getContext(),
+                adr.getDecision(),
+                adr.getConsequences(),
+                adr.getStatus(),
+                adr.getRfc().getId(),
+                author,
+                adr.getCreatedAt(),
+                adr.getUpdatedAt(),
+                adr.getGitHubUrl()          // null until i approve the adr
+        );
+    }
 
     @Transactional(readOnly = true)
     public Page<AdrResponse> listAdrs(Pageable pageable) {
         return adrRepository.findAll(pageable)
+                .map(adr -> new AdrResponse(
+                        adr.getId(),
+                        adr.getTitle(),
+                        adr.getContext(),
+                        adr.getDecision(),
+                        adr.getConsequences(),
+                        adr.getStatus(),
+                        adr.getRfc().getId(),
+                        adr.getCreatedAt(),
+                        adr.getUpdatedAt(),
+                        adr.getGitHubUrl()
+                ));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<AdrResponse> listAdrsByOrg(Long orgId, Pageable pageable) {
+        return adrRepository.findByRfc_Org_Id(orgId, pageable)
                 .map(adr -> new AdrResponse(
                         adr.getId(),
                         adr.getTitle(),
@@ -133,8 +173,8 @@ public class AdrService {
     }
 
     @Transactional
-    public AdrResponse updateAdr(Long id, UpdateAdrRequest request, Long userId) {
-        ADR adr = adrRepository.findById(id)
+    public AdrResponse updateAdrForOrg(Long id, Long orgId, UpdateAdrRequest request) {
+        ADR adr = adrRepository.findByIdAndRfc_Org_Id(id, orgId)
                 .orElseThrow(() -> new EntityNotFoundException("ADR not found with id " + id));
 
         adr.setTitle(request.title() != null ? request.title().trim() : null);

@@ -16,7 +16,7 @@ public record CommentResponse(
         return new CommentResponse(
                 c.getId(),
                 c.getAuthor() != null ? c.getAuthor().getId() : null,
-                c.getAuthor() != null ? c.getAuthor().getUsername() : null,
+                c.getAuthor() != null ? c.getAuthor().getEmail() : null,
                 c.getContent(),
                 c.getCreatedAt(),
                 c.getUpdatedAt(),
