@@ -1,18 +1,27 @@
 package dsd.api.cdmsa.controller;
 
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
-
 import java.util.List;
 
-import dsd.api.cdmsa.exception.*;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.web.PagedResourcesAssembler;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.PagedModel;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+import dsd.api.cdmsa.assembler.OrgModelAssembler;
+import dsd.api.cdmsa.dto.OrganizationResponse;
+import dsd.api.cdmsa.dto.OrganizationResponseAlt;
 import dsd.api.cdmsa.model.Organization;
-import dsd.api.cdmsa.payload.OrgAdminRequest;
-import dsd.api.cdmsa.payload.OrgAdminResponse;
+import dsd.api.cdmsa.model.UserPrincipal;
 import dsd.api.cdmsa.service.OrgService;
+import dsd.api.cdmsa.dto.*;
+import dsd.api.cdmsa.exception.UserNotFoundException;
 
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 
 @RestController
@@ -21,41 +30,96 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class OrgController {
 
-    private final OrgService service;
+    private final OrgService orgService;
 
-    // POST Orgs
-    @PostMapping()
-    ResponseEntity<OrgAdminResponse> newOrg(@Valid @RequestBody OrgAdminRequest newOrg) {
+    private OrgModelAssembler orgModelAssembler;
+    private PagedResourcesAssembler<Organization> pagedResourcesAssembler;
 
-        // Store Org
-        OrgAdminResponse dto = service.createOrg(newOrg);
-        // Return answer
-        return ResponseEntity.created(linkTo(OrgController.class).slash(dto.getOrg().getId()).toUri()).body(dto);
+    private UserPrincipal getAuthenticatedPrincipal() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof UserPrincipal) {
+            return (UserPrincipal) principal;
+        }
+        throw new UserNotFoundException("anonymous");
+    }
+
+    private Long getCurrentUserId(HttpServletRequest request) {
+        try {
+            return getAuthenticatedPrincipal().getUser().getId();
+        } catch (UserNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new UserNotFoundException("anonymous");
+        }
     }
 
     // GET Org (individual)
-    @GetMapping(value = "/{id}", produces = { "application/json" })
-    public ResponseEntity<Organization> getOrg(@PathVariable Long id) {
-        Organization org = service.searchById(id).orElseThrow(() -> new OrgNotFoundException(id));
+    @GetMapping(value = "/{id}")
+    public ResponseEntity<EntityModel<OrganizationResponseAlt>> getOrg(@PathVariable Long id) {
+        Organization org = orgService.getOrgDetailsAlt(id);
+        return ResponseEntity.ok(orgModelAssembler.toModel(org));
+    }
+
+    @GetMapping("/users")
+    public ResponseEntity<PagedModel<EntityModel<OrganizationResponseAlt>>> getAllUsers(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(defaultValue = "0", required = false) int page,
+            @RequestParam(defaultValue = "2", required = false) int size) {
+
+        Page<Organization> orgs = orgService.findAllOrgs(principal.getOrgId(), page, size);
+        return ResponseEntity.ok(pagedResourcesAssembler.toModel(orgs, orgModelAssembler));
+    }
+
+    // Get organization details
+    @GetMapping
+    public ResponseEntity<OrganizationResponse> getOrgDetails(HttpServletRequest httpRequest) {
+        Long userId = getCurrentUserId(httpRequest);
+        OrganizationResponse org = orgService.getOrgDetails(userId);
         return ResponseEntity.ok(org);
     }
 
-    // GET Orgs (collection)
-    @GetMapping(value = "", produces = { "application/json" })
-    public ResponseEntity<List<Organization>> getOrgs() {
-        List<Organization> orgs = service.findOrgs();
-        return ResponseEntity.ok(orgs);
+    // Update organization details
+    @PutMapping
+    public ResponseEntity<OrganizationResponse> updateOrgDetails(@Valid @RequestBody UpdateOrganizationRequest request, HttpServletRequest httpRequest) {
+        Long userId = getCurrentUserId(httpRequest);
+        OrganizationResponse orgUpdated = orgService.updateOrgDetails(userId, request);
+        return ResponseEntity.ok(orgUpdated);
     }
 
-    // DELETE Org
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteOrg(@PathVariable Long id) {
-        if (service.existOrgById(id)) {
-            service.deleteOrg(id);
-        } else {
-            throw new OrgNotFoundException(id);
-        }
-        return ResponseEntity.noContent().build();
+    // connect GitHub through pat
+    @PostMapping("/github")
+    public ResponseEntity<ConnectGitHubResponse> connectGitHub(@Valid @RequestBody ConnectGitHubRequest request, HttpServletRequest httpRequest){
+        // check id user is admin
+        Long userId = getCurrentUserId(httpRequest);
+        ConnectGitHubResponse resp = orgService.connectGitHub(userId, request);
+        return ResponseEntity.ok(resp);
     }
 
+    // get the repos of the organization, to show them in a dropdown menu and select one
+    @GetMapping("/github/repos")
+    public ResponseEntity<List<RepositoryResponse>> getRepos(HttpServletRequest httpRequest) {
+        Long userId = getCurrentUserId(httpRequest);
+        return ResponseEntity.ok(orgService.getRepos(userId));
+    }
+
+    // get the branches of a certain repo of the organization, to show them in a dropdown menu and select one
+    // check if passing owner is necessary, we have only one owner?
+    @GetMapping("/github/{owner}/{repo}/branches") // owner and repo sent from the frontend, we have them from getRepos
+    public ResponseEntity<List<BranchResponse>> getBranches(@PathVariable String owner,
+                                                            @PathVariable String repo,
+                                                            HttpServletRequest httpRequest) {
+        Long userId = getCurrentUserId(httpRequest);
+        return ResponseEntity.ok(orgService.getBranches(userId, owner, repo));
+    }
+
+    // choose repo e branch where to store ADRs
+    @PutMapping("/github/selection")
+    public ResponseEntity<OrganizationResponse> saveRepoBranchSelection(
+            @Valid @RequestBody RepoBranchSelectionRequest request,
+            HttpServletRequest httpRequest) {
+
+        Long userId = getCurrentUserId(httpRequest);
+        OrganizationResponse response = orgService.saveRepoBranchSelection(userId, request);
+        return ResponseEntity.ok(response);
+    }
 }

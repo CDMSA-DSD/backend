@@ -1,0 +1,38 @@
+package dsd.api.cdmsa.assembler;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.server.RepresentationModelAssembler;
+import org.springframework.lang.NonNull;
+import org.springframework.stereotype.Component;
+
+import dsd.api.cdmsa.controller.OrgController;
+import dsd.api.cdmsa.controller.UserController;
+import dsd.api.cdmsa.dto.OrganizationResponseAlt;
+import dsd.api.cdmsa.mapper.OrgMapper;
+import dsd.api.cdmsa.model.Organization;
+
+@Component
+public class OrgModelAssembler
+        implements RepresentationModelAssembler<Organization, EntityModel<OrganizationResponseAlt>> {
+
+    @Override
+    @NonNull
+    public EntityModel<OrganizationResponseAlt> toModel(Organization org) {
+
+        OrganizationResponseAlt dto = OrgMapper.toDto(org);
+
+        EntityModel<OrganizationResponseAlt> model = EntityModel.of(dto,
+                // self link: GET /orgs/{id}
+                linkTo(methodOn(OrgController.class).getOrg(org.getId())).withSelfRel());
+
+        // rel link: GET /users/{id}
+        model.add(
+                linkTo(methodOn(UserController.class)
+                        .getUser(org.getAdminUser().getId()))
+                        .withRel("admin"));
+        return model;
+    }
+}

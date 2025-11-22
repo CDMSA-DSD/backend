@@ -11,7 +11,12 @@ spring:
         format_sql: true
 logging:
   level:
-    org.hibernate.SQL: 
+    org.hibernate.SQL: debug
+
+jwt:
+  secret: xH2t9RjAff+7OQzAPDBtUxkcoZ1FGMfAcJj5851gX+cjiC5vudFwyoLuhMkj4iO1mXFET/w2akpTnX2vrZtS9g==
+  expirantion-access-token: 9000000000000000000000000000
+
     
 
 # --------------------- CHATGPT RECOMMENDATIONS FOR THIS FILE -----------------------------------
