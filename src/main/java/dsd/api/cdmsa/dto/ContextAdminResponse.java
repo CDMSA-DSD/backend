@@ -10,7 +10,7 @@ public record ContextAdminResponse(
     public static ContextAdminResponse fromMembership(ContextMembership member) {
         return new ContextAdminResponse(
                 member.getUser().getId(),
-                member.getUser().getUsername(),
+                member.getUser().getEmail(),
                 member.isContextAdmin());
     }
 }

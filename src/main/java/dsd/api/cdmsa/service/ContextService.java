@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import dsd.api.cdmsa.dto.AddContextMemberRequest;
 import dsd.api.cdmsa.dto.ContextAdminResponse;
+import dsd.api.cdmsa.dto.ContextByAdminResponse;
 import dsd.api.cdmsa.dto.ContextMemberResponse;
 import dsd.api.cdmsa.dto.ContextResponse;
 import dsd.api.cdmsa.dto.CreateContextRequest;
@@ -315,6 +316,18 @@ public class ContextService {
 
         return admins.stream()
                 .map(ContextAdminResponse::fromMembership)
+                .toList();
+    }
+
+    // ------- List current context for a especific context admin (for /login)
+
+    @Transactional(readOnly = true)
+    public List<ContextByAdminResponse> findContextByAdmin(User user) {
+
+        List<ContextMembership> context = membershipRepository.findByUserIdAndContextAdminTrue(user.getId());
+
+        return context.stream()
+                .map(ContextByAdminResponse::fromMembership)
                 .toList();
     }
 
