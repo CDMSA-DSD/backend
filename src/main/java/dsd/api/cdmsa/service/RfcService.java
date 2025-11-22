@@ -4,6 +4,7 @@ import dsd.api.cdmsa.dto.*;
 import dsd.api.cdmsa.model.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -41,43 +42,36 @@ public class RfcService {
         // ...
 
         RFC rfc = rfcRepository.findById(rfcId)
-                .orElseThrow(() -> new RuntimeException("RFC not found"));
+                .orElseThrow(() -> new RfcNotFoundException("RFC not found"));
+
+        if (rfc.getStatus() != RFC.Status.UNDER_REVIEW) {
+            throw new RfcBadRequestException("Comments are not allowed on closed RFCs");
+        }
+
+        User author = userRepository.findById(userId)
+                .orElseThrow(() -> new RfcNotFoundException("User not found"));
 
         Comment comment = new Comment();
-        comment.setAuthor(userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found")));
+        comment.setAuthor(author);
         comment.setContent(request.content().trim());
         comment.setRfc(rfc);
 
-        rfc.getComments().add(comment);
-        rfcRepository.save(rfc); // saved also in the table comments thanks to cascade all
+        // IF parentId is not null, add a parent-child relationship
+        if (request.parentId() != null) {
+            Comment parent = commentRepository.findById(request.parentId())
+                    .orElseThrow(() -> new RfcNotFoundException("Parent comment not found"));
 
-    List<CommentResponse> commentResponses = rfc.getComments().stream()
-        .map(c -> new CommentResponse(
-            c.getId(),
-            c.getAuthor() != null ? c.getAuthor().getId() : null,
-            c.getAuthor() != null ? c.getAuthor().getEmail() : null,  // Before getUsername
-            c.getContent(),
-            c.getCreatedAt(),
-            c.getUpdatedAt()
-        ))
-        .toList();
+            // Validación extra: el parent debe pertenecer al mismo RFC
+            if (!parent.getRfc().getId().equals(rfcId)) {
+                throw new RfcBadRequestException("Reply comment must belong to the same RFC");
+            }
 
-    // Build full RfcResponse using the record constructor arguments order
-    return new RfcResponse(
-        rfc.getId(),
-        rfc.getTitle(),
-        rfc.getDescription(),
-        rfc.getUser() != null ? rfc.getUser().getId() : null,
-        rfc.getUser() != null ? rfc.getUser().getFirstname() : null, //Before getName
-        rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
-        rfc.getOrg() != null ? rfc.getOrg().getId() : null,
-        rfc.getStatus(),
-        rfc.getCreatedAt(),
-        rfc.getUpdatedAt(),
-        java.util.List.of(), // alternatives (lightweight here)
-        commentResponses
-    );
+            comment.setParent(parent);
+        }
+
+        commentRepository.save(comment);
+
+        return getRfcById(rfcId);
     }
 
     // ---------- US-12: Create RFC ----------
@@ -175,19 +169,22 @@ public class RfcService {
     }
 
     private RfcResponse toResponse(RFC rfc) {
-    return new RfcResponse(
-        rfc.getId(),
-        rfc.getTitle(),
-        rfc.getDescription(),
-        rfc.getUser() != null ? rfc.getUser().getId() : null,
-        rfc.getUser() != null ? rfc.getUser().getFirstname() : null, //Before getName
-        rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
-        rfc.getOrg() != null ? rfc.getOrg().getId() : null,
-        rfc.getStatus(),
-        rfc.getCreatedAt(),
-        rfc.getUpdatedAt(),
-        java.util.List.of(), // lightweight list for summary
-        java.util.List.of());
+        // Compute comment count (may load comments; acceptable for page sizes)
+        int count = commentRepository.findByRfcId(rfc.getId()).size();
+        return new RfcResponse(
+                rfc.getId(),
+                rfc.getTitle(),
+                rfc.getDescription(),
+                rfc.getUser() != null ? rfc.getUser().getId() : null,
+                rfc.getUser() != null ? rfc.getUser().getFirstname() : null, //Before getName
+                rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
+                rfc.getOrg() != null ? rfc.getOrg().getId() : null,
+                rfc.getStatus(),
+                rfc.getCreatedAt(),
+                rfc.getUpdatedAt(),
+                (long) count,
+                java.util.List.of(), // lightweight list for summary
+                java.util.List.of());
     }
 
     private RfcResponse toDetailedResponse(RFC rfc) {
@@ -200,30 +197,47 @@ public class RfcService {
                 })
                 .collect(Collectors.toList());
 
-        List<CommentResponse> comments = commentRepository.findByRfcId(rfc.getId()).stream()
-            .map(c -> new CommentResponse(
-                c.getId(),
-                c.getAuthor() != null ? c.getAuthor().getId() : null,
-                c.getAuthor() != null ? c.getAuthor().getEmail() : null, //Before getUsernam
-                c.getContent(),
-                c.getCreatedAt(),
-                c.getUpdatedAt()
-            ))
-            .collect(Collectors.toList());
+        List<Comment> comments = commentRepository.findByRfcId(rfc.getId());
+
+        // Map: parentId → children list
+        Map<Long, List<Comment>> childrenMap = comments.stream()
+                .filter(c -> c.getParent() != null)
+                .collect(Collectors.groupingBy(c -> c.getParent().getId()));
+
+        // Comments without parent (root comments)
+        List<Comment> roots = comments.stream()
+                .filter(c -> c.getParent() == null)
+                .toList();
+
+        // Transform it into a thread
+        List<CommentResponse> threaded = roots.stream()
+                .map(root -> buildThreaded(root, childrenMap))
+                .toList();
 
         return new RfcResponse(
-            rfc.getId(),
-            rfc.getTitle(),
-            rfc.getDescription(),
-            rfc.getUser() != null ? rfc.getUser().getId() : null,
-            rfc.getUser() != null ? rfc.getUser().getFirstname() : null, // Before getName
-            rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
-            rfc.getOrg() != null ? rfc.getOrg().getId() : null,
-            rfc.getStatus(),
-            rfc.getCreatedAt(),
+                rfc.getId(),
+                rfc.getTitle(),
+                rfc.getDescription(),
+                rfc.getUser() != null ? rfc.getUser().getId() : null,
+                rfc.getUser() != null ? rfc.getUser().getFirstname() : null, // Before getName
+                rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
+                rfc.getOrg() != null ? rfc.getOrg().getId() : null,
+                rfc.getStatus(),
+                rfc.getCreatedAt(),
             rfc.getUpdatedAt(),
+            (long) comments.size(),
             alts,
-            comments);
+            threaded);
+    }
+
+    private CommentResponse buildThreaded(Comment comment, Map<Long, List<Comment>> childrenMap) {
+
+        List<CommentResponse> replies = childrenMap.getOrDefault(comment.getId(), List.of())
+                .stream()
+                .map(child -> buildThreaded(child, childrenMap))
+                .toList();
+
+        return CommentResponse.fromEntity(comment, replies);
     }
 
     // ---------- Alternatives (POST & GET) ----------
@@ -336,8 +350,7 @@ public class RfcService {
 
             rfc.setStatus(RFC.Status.CLOSED_DECIDED);
             // Link winning alternative
-            // rfc.setWinningAlternative(winningAlt);  maybe cool to have?
-
+            // rfc.setWinningAlternative(winningAlt); maybe cool to have?
 
             ADR adr = adrRepository.findByRfcId(rfcId)
                     .orElseThrow(() -> new RfcNotFoundException("ADR not found for this RFC"));
@@ -363,7 +376,6 @@ public class RfcService {
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         Optional<Vote> existing = voteRepository.findByAlternativeAndVoter(alternative, voter);
-
 
         if (existing.isPresent()) {
             Vote vote = existing.get();
