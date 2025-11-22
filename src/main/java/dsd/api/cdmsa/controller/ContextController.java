@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,6 +24,9 @@ import dsd.api.cdmsa.dto.PromoteContextAdminRequest;
 import dsd.api.cdmsa.dto.UpdateContextRequest;
 import dsd.api.cdmsa.service.ContextService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.core.context.SecurityContextHolder;
+import dsd.api.cdmsa.exception.UserNotFoundException;
+import dsd.api.cdmsa.model.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -33,17 +37,21 @@ public class ContextController {
 
     private final ContextService contextService;
 
-    // ---------------- CHANGE WHEN AUTH IS READY ----------------
+    private UserPrincipal getAuthenticatedPrincipal() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof UserPrincipal) {
+            return (UserPrincipal) principal;
+        }
+        throw new UserNotFoundException("anonymous");
+    }
 
     private Long getCurrentUserId(HttpServletRequest request) {
-        String header = request.getHeader("X-User-Id");
-        if (header == null || header.isBlank()) {
-            throw new RuntimeException("Missing X-User-Id header (temporary auth)");
-        }
         try {
-            return Long.parseLong(header);
-        } catch (NumberFormatException e) {
-            throw new RuntimeException("Invalid X-User-Id header");
+            return getAuthenticatedPrincipal().getUser().getId();
+        } catch (UserNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new UserNotFoundException("anonymous");
         }
     }
 
