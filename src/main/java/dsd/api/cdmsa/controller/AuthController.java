@@ -35,7 +35,7 @@ public class AuthController {
         OrgAdminResponse dto = orgService.createOrg(newOrg);
 
         // Return org's URI in header and admin's URI in body
-        return ResponseEntity.created(linkTo(methodOn(OrgController.class).getOrg(dto.id_org())).toUri())
+        return ResponseEntity.created(linkTo(methodOn(OrgController.class).getOrg(dto.orgId())).toUri())
                 .body(dto.adminUri());
     }
 

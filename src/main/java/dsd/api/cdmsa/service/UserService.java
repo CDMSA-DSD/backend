@@ -57,7 +57,7 @@ public class UserService {
      public User createUserByInvitation(SignInRequest registration, String token) {
         
 
-        OrganizationInvitation invitation = invitationService.getInvitationByToken(token); // retrive invitation with that id and token
+        OrganizationInvitation invitation = invitationService.getInvitationByToken(token); // retrive invitation with that token
 
          // Creates the user (set all the parameters)
             User user = new User();
@@ -103,7 +103,7 @@ public class UserService {
         }
     }
 
-    private boolean isOrgAdmin (User user) {
+    public boolean isOrgAdmin (User user) {
         return user.getId().equals(user.getOrg().getAdminUser().getId());
     }
 

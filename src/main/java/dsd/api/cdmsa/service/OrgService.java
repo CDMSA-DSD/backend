@@ -15,7 +15,6 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.core.context.SecurityContextHolder;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import dsd.api.cdmsa.controller.UserController;
@@ -26,14 +25,12 @@ import dsd.api.cdmsa.dto.SignInRequest;
 import dsd.api.cdmsa.dto.UpdateOrganizationRequest;
 import dsd.api.cdmsa.exception.OrgExistsException;
 import dsd.api.cdmsa.exception.OrgNotFoundException;
-import dsd.api.cdmsa.exception.UserNotFoundException;
 import dsd.api.cdmsa.model.Organization;
 import dsd.api.cdmsa.model.User;
 import dsd.api.cdmsa.repository.OrganizationRepository;
 import dsd.api.cdmsa.repository.UserRepository;
 import dsd.api.cdmsa.dto.*;
 
-import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 
 @Service
