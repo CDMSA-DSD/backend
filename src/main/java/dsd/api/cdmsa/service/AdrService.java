@@ -34,6 +34,7 @@ public class AdrService {
     private final RfcRepository rfcRepository;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+    private final RestTemplate restTemplate;
 
     @Transactional
     public AdrResponse createAdr(Long userId, Long orgId, CreateAdrRequest request) {
@@ -85,7 +86,7 @@ public class AdrService {
     public AdrResponse getAdrById(Long id) {
 
         ADR adr = adrRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("RFC not found with id " + id));
+                .orElseThrow(() -> new EntityNotFoundException("ADR not found with id " + id));
 
         return new AdrResponse(
                 adr.getId(),
@@ -160,6 +161,7 @@ public class AdrService {
                 ));
     }
 
+    // not used?
     @Transactional
     public ADR createDraftFromRfcAndAlternative(RFC rfc, Alternative alternative) {
             ADR adr = new ADR();
@@ -306,7 +308,6 @@ public class AdrService {
         HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(requestBody, headers);
 
         // do the put
-        RestTemplate restTemplate = new RestTemplate();
         ResponseEntity<String> response = restTemplate.exchange(
                 url,
                 HttpMethod.PUT,
