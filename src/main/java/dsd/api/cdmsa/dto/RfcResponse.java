@@ -15,7 +15,7 @@ public record RfcResponse(
         RFC.Status status,
         java.time.Instant createdAt,
         java.time.Instant updatedAt,
+        Long commentCount,
         List<AlternativeResponse> alternatives,
         List<CommentResponse> comments) {
-
 }
