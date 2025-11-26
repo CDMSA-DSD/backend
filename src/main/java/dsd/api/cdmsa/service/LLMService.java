@@ -179,5 +179,5 @@ public class LLMService {
     }
 
     // LLM answer
-    private record LlmAdrContent(String context, String decision, String consequences) {}
+    public record LlmAdrContent(String context, String decision, String consequences) {}
 }

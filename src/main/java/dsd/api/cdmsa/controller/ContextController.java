@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,7 +14,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.CrossOrigin;
 
 import dsd.api.cdmsa.dto.AddContextMemberRequest;
 import dsd.api.cdmsa.dto.ContextAdminResponse;
@@ -22,11 +22,10 @@ import dsd.api.cdmsa.dto.ContextResponse;
 import dsd.api.cdmsa.dto.CreateContextRequest;
 import dsd.api.cdmsa.dto.PromoteContextAdminRequest;
 import dsd.api.cdmsa.dto.UpdateContextRequest;
-import dsd.api.cdmsa.service.ContextService;
-import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.security.core.context.SecurityContextHolder;
 import dsd.api.cdmsa.exception.UserNotFoundException;
 import dsd.api.cdmsa.model.UserPrincipal;
+import dsd.api.cdmsa.service.ContextService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
 @RestController
