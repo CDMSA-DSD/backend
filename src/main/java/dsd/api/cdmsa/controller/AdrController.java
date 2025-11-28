@@ -114,6 +114,17 @@ public class AdrController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteAdr(
+            @PathVariable Long id,
+            HttpServletRequest httpRequest) {
+
+        Long userId = getCurrentUserId(httpRequest);
+        Long orgId = getCurrentUserOrgId(httpRequest);
+        adrService.deleteAdr(id, orgId, userId);
+        return ResponseEntity.noContent().build();
+    }
+
     /* it is necessary?
 
     public ADR createDraftFromRfcAndAlternative(RFC rfc, Alternative alternative) {
