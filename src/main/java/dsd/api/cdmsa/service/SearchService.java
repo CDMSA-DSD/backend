@@ -17,7 +17,7 @@ public class SearchService {
     private final SearchRepository searchRepository;
 
     @Transactional(readOnly = true)
-    public List<SearchResult> search(String query, String sortParam, Long authorId, Instant dateFrom, Instant dateTo) {
+    public List<SearchResult> search(String query, String sortParam, Long authorId, Long orgId, Instant dateFrom, Instant dateTo) {
 
         // Avoid too short searches
         if (query == null || query.trim().length() < 2) {
@@ -47,6 +47,7 @@ public class SearchService {
                 formattedQuery,
                 sort,
                 authorId,
+                orgId,
                 dateFrom,
                 dateTo
         );

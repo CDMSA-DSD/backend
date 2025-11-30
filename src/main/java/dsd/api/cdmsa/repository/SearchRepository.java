@@ -15,7 +15,7 @@ public interface SearchRepository extends JpaRepository<RFC, Long> {
 
     @Query(value = """
         SELECT * FROM (
-            -- searching in ADRs
+            -- 1. SEARCHING IN ADRs
             SELECT 
                 a.id, 
                 a.title, 
@@ -25,21 +25,20 @@ public interface SearchRepository extends JpaRepository<RFC, Long> {
                 'ADR' AS type, 
                 MATCH(a.title, a.context, a.decision) AGAINST(:query IN BOOLEAN MODE) AS score
             FROM adrs a
-            JOIN rfc r ON a.rfc_id = r.id
+            JOIN rfc r ON a.rfc_id = r.id      -- Join con RFC per ottenere org_id e user
             JOIN app_users u ON r.user_id = u.id
             WHERE 
                 MATCH(a.title, a.context, a.decision) AGAINST(:query IN BOOLEAN MODE)
                 
-                -- author filter (Optional)
-                AND (:authorId IS NULL OR r.user_id = :authorId)
+                AND r.org_id = :orgId
                 
-                -- date filter (optional)
+                AND (:authorId IS NULL OR r.user_id = :authorId)
                 AND (:dateFrom IS NULL OR a.created_at >= :dateFrom)
                 AND (:dateTo IS NULL OR a.created_at <= :dateTo)
 
             UNION ALL
 
-            -- searching in RFCs
+            -- 2. SEARCHING IN RFCs
             SELECT 
                 r.id, 
                 r.title, 
@@ -53,13 +52,13 @@ public interface SearchRepository extends JpaRepository<RFC, Long> {
             WHERE 
                 MATCH(r.title, r.description) AGAINST(:query IN BOOLEAN MODE)
                 
-                -- same filters as ADRs
+                AND r.org_id = :orgId
+                
                 AND (:authorId IS NULL OR r.user_id = :authorId)
                 AND (:dateFrom IS NULL OR r.created_at >= :dateFrom)
                 AND (:dateTo IS NULL OR r.created_at <= :dateTo)
         ) AS combined
         
-        -- sorting
         ORDER BY 
             CASE WHEN :sort = 'date_desc' THEN date END DESC,
             CASE WHEN :sort = 'date_asc'  THEN date END ASC,
@@ -70,6 +69,7 @@ public interface SearchRepository extends JpaRepository<RFC, Long> {
             @Param("query") String query,
             @Param("sort") String sort,
             @Param("authorId") Long authorId,
+            @Param("orgId") Long orgId,
             @Param("dateFrom") Instant dateFrom,
             @Param("dateTo") Instant dateTo
     );
