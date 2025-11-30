@@ -56,7 +56,7 @@ public class User extends RepresentationModel<User> {
     private Set<Observer> observers = new java.util.HashSet<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<Reviewer> reviewers = new java.util.HashSet<>();
+    private Set<UserReviewer> reviewers = new java.util.HashSet<>();
 
     @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Comment> comment = new java.util.HashSet<>();

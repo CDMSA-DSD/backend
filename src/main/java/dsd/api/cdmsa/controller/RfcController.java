@@ -14,10 +14,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import dsd.api.cdmsa.service.RfcService;
-import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.security.core.context.SecurityContextHolder;
-import dsd.api.cdmsa.exception.*;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import dsd.api.cdmsa.model.User;
 import dsd.api.cdmsa.model.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 
@@ -34,46 +33,16 @@ public class RfcController {
     private final RfcService rfcService;
     private final LLMService llmService;
 
-     private UserPrincipal getAuthenticatedPrincipal() {
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (principal instanceof UserPrincipal) {
-            return (UserPrincipal) principal;
-        }
-        throw new UserNotFoundException("anonymous");
-    }
-
-    private Long getCurrentUserId(HttpServletRequest request) {
-        try {
-            return getAuthenticatedPrincipal().getUser().getId();
-        } catch (UserNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new UserNotFoundException("anonymous");
-        }
-    }
-
-    /**
-     * Returns the organization id for the current authenticated user.
-     */
-    private Long getCurrentUserOrgId(HttpServletRequest request) {
-        try {
-            Long orgId = getAuthenticatedPrincipal().getOrgId();
-            if (orgId != null) return orgId;
-            throw new OrgNotFoundException(0L);
-        } catch (OrgNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new OrgNotFoundException(0L);
-        }
-    }
-
     // post a new comment under the rfc identified by id
     @PostMapping("/{id}/comments")
-    public ResponseEntity<RfcResponse> postCommentToRfc(@PathVariable Long id, @Valid @RequestBody CreateCommentRequest request, HttpServletRequest httpRequest) {
-        // TO DO - check if user is logged in ...
+    public ResponseEntity<RfcResponse> postCommentToRfc(
+            @PathVariable Long id,
+            @Valid @RequestBody CreateCommentRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
 
-        Long userId = getCurrentUserId(httpRequest);
-        RfcResponse response = rfcService.postCommentToRfc(id, userId, request);
+        User user = principal.getUser();
+        RfcResponse response = rfcService.postCommentToRfc(id, user.getId(), request);
+
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -86,10 +55,11 @@ public class RfcController {
     @PostMapping
     public ResponseEntity<RfcResponse> createRfc(
             @RequestBody CreateRfcRequest request,
-            HttpServletRequest httpRequest) {
-        Long userId = getCurrentUserId(httpRequest);
-        Long orgId = getCurrentUserOrgId(httpRequest);
-        RfcResponse response = rfcService.createRfc(userId, orgId, request);
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        User user = principal.getUser();
+        RfcResponse response = rfcService.createRfc(user.getId(), principal.getOrgId(), request);
+
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -102,9 +72,9 @@ public class RfcController {
     @GetMapping
     public Page<RfcResponse> listRfcs(
             @PageableDefault(size = 20) Pageable pageable,
-            HttpServletRequest httpRequest) {
-        Long orgId = getCurrentUserOrgId(httpRequest);
-        return rfcService.listRfcsByOrg(orgId, pageable);
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        return rfcService.listRfcsByOrg(principal.getOrgId(), pageable);
     }
 
     /**
@@ -113,10 +83,11 @@ public class RfcController {
     @GetMapping("/{rfcId}")
     public ResponseEntity<RfcSpecificResponse> getRfcById(
             @PathVariable Long rfcId,
-            HttpServletRequest httpRequest) {
-        Long userId = getCurrentUserId(httpRequest);
-        Long orgId = getCurrentUserOrgId(httpRequest);
-        RfcSpecificResponse response = rfcService.getRfcByIdForOrg(rfcId, orgId, userId);
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        User user = principal.getUser();
+        RfcSpecificResponse response = rfcService.getRfcByIdForOrg(rfcId, principal.getOrgId(), user.getId());
+
         return ResponseEntity.ok(response);
     }
 
@@ -138,9 +109,11 @@ public class RfcController {
     public ResponseEntity<AlternativeResponse> createAlternative(
             @PathVariable Long rfcId,
             @RequestBody CreateAlternativeRequest request,
-            HttpServletRequest httpRequest) {
-        Long userId = getCurrentUserId(httpRequest);
-        AlternativeResponse response = rfcService.addAlternative(rfcId, userId, request);
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        User user = principal.getUser();
+        AlternativeResponse response = rfcService.addAlternative(rfcId, user.getId(), request);
+
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -155,10 +128,10 @@ public class RfcController {
     @GetMapping("/{rfcId}/alternatives")
     public ResponseEntity<List<AlternativeResponse>> listAlternatives(
             @PathVariable Long rfcId,
-            HttpServletRequest httpRequest) {
-        // ensure alternatives are only returned for RFCs in the same organization
-        Long orgId = getCurrentUserOrgId(httpRequest);
-        List<AlternativeResponse> alternatives = rfcService.listAlternativesForOrg(rfcId, orgId);
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        List<AlternativeResponse> alternatives = rfcService.listAlternativesForOrg(rfcId, principal.getOrgId());
+
         return ResponseEntity.ok(alternatives);
     }
 
@@ -168,9 +141,10 @@ public class RfcController {
     public ResponseEntity<RfcResponse> closeRfc(
             @PathVariable Long rfcId,
             @RequestBody CloseRfcRequest request,
-            HttpServletRequest httpRequest) {
-        Long userId = getCurrentUserId(httpRequest);
-        RfcResponse response = rfcService.closeRfc(rfcId, userId, request);
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        User user = principal.getUser();
+        RfcResponse response = rfcService.closeRfc(rfcId, user.getId(), request);
         return ResponseEntity.ok(response);
     }
 
@@ -178,12 +152,13 @@ public class RfcController {
     public ResponseEntity<VoteResponse> voteForAlternative(
             @PathVariable Long altId,
             @RequestBody VoteRequest voteRequest,
-            HttpServletRequest httpRequest) {
+            @AuthenticationPrincipal UserPrincipal principal) {
 
-        // check if user is a reviewer, probably we need also the rfcId to see status = under review
-        Long userId = getCurrentUserId(httpRequest);
+        // check if user is a reviewer, probably we need also the rfcId to see status =
+        // under review
+        User user = principal.getUser();
 
-        VoteResponse resp = rfcService.voteForAlternative(altId, userId, voteRequest.outcome());
+        VoteResponse resp = rfcService.voteForAlternative(altId, user.getId(), voteRequest.outcome());
 
         return ResponseEntity.ok(resp);
     }
@@ -193,10 +168,22 @@ public class RfcController {
     public ResponseEntity<GenerateAdrResponse> createDraftFromRfcAndAlternative(
             @PathVariable Long rfcId,
             @RequestBody GenerateAdrRequest request,
-            HttpServletRequest httpRequest) {
-        Long userId = getCurrentUserId(httpRequest);
-        GenerateAdrResponse response = llmService.createDraftFromRfcAndAlternative(rfcId, userId, request);
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        User user = principal.getUser();
+        GenerateAdrResponse response = llmService.createDraftFromRfcAndAlternative(rfcId, user.getId(), request);
+
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping(value = "/{id}/reviewers")
+    public ResponseEntity<Void> asignReviewersToRfc(
+            @PathVariable Long id,
+            @RequestBody ReviewersRequest reviewers) {
+
+        rfcService.asignReviewersToRfc(reviewers, id);
+
+        return ResponseEntity.noContent().build();
     }
 
 }

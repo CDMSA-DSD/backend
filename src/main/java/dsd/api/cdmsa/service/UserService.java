@@ -2,6 +2,8 @@ package dsd.api.cdmsa.service;
 
 import java.security.InvalidParameterException;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.*;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -54,18 +56,18 @@ public class UserService {
         throw new UserExistsException(user.getFirstname() + " " + user.getLastname());
     }
 
-     public User createUserByInvitation(SignInRequest registration, String token) {
-        
+    public User createUserByInvitation(SignInRequest registration, String token) {
 
-        OrganizationInvitation invitation = invitationService.getInvitationByToken(token); // retrive invitation with that token
+        OrganizationInvitation invitation = invitationService.getInvitationByToken(token); // retrive invitation with
+                                                                                           // that token
 
-         // Creates the user (set all the parameters)
-            User user = new User();
-            user.setFirstname(registration.firstname());
-            user.setLastname(registration.lastname());
-            user.setEmail(registration.email());
-            user.setPassword(registration.password()); // Hashed later in createUser
-            user.setOrg(invitation.getOrg());
+        // Creates the user (set all the parameters)
+        User user = new User();
+        user.setFirstname(registration.firstname());
+        user.setLastname(registration.lastname());
+        user.setEmail(registration.email());
+        user.setPassword(registration.password()); // Hashed later in createUser
+        user.setOrg(invitation.getOrg());
 
         return createUser(user);
     }
@@ -103,7 +105,7 @@ public class UserService {
         }
     }
 
-    public boolean isOrgAdmin (User user) {
+    public boolean isOrgAdmin(User user) {
         return user.getId().equals(user.getOrg().getAdminUser().getId());
     }
 
@@ -115,6 +117,24 @@ public class UserService {
     public Page<User> findAllUsers(Long orgId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         return repository.findByOrgId(orgId, pageable);
+    }
+
+    public List<User> findAllUsersByid(List<Long> userIds) {
+        List<User> users = repository.findAllById(userIds);
+
+        Set<Long> foundIds = users.stream()
+                .map(User::getId)
+                .collect(Collectors.toSet());
+
+        List<Long> missing = userIds.stream()
+                .filter(id -> !foundIds.contains(id))
+                .toList();
+
+        if (!missing.isEmpty()) {
+            throw new UserNotFoundException(missing);
+        }
+
+        return users;
     }
 
     public boolean existUserById(Long id) {

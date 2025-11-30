@@ -1,6 +1,8 @@
 package dsd.api.cdmsa.service;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -151,6 +153,25 @@ public class ContextService {
                 .stream()
                 .map(ContextResponse::fromEntity)
                 .toList();
+    }
+
+   
+    public List<Context> findAllUsersByid(List<Long> contextIds) {
+        List<Context> contexts = contextRepository.findAllById(contextIds);
+
+        Set<Long> foundIds = contexts.stream()
+                .map(Context::getId)
+                .collect(Collectors.toSet());
+
+        List<Long> missing = contextIds.stream()
+                .filter(id -> !foundIds.contains(id))
+                .toList();
+
+        if (!missing.isEmpty()) {
+            throw new ContextNotFoundException("Contexts " + missing + " not found.");
+        }
+
+        return contexts;
     }
 
     // ---------- US-08: Get a single Context ----------

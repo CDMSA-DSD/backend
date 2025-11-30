@@ -34,6 +34,11 @@ public class RfcService {
     private final AlternativeRepository alternativeRepository;
     private final CommentRepository commentRepository;
     private final VoteRepository voteRepository;
+    private final UserReviewerRepository userReviewerRepository;
+    private final ContextReviewerRepository contextReviewerRepository;
+
+    private final UserService userService;
+    private final ContextService contextService;
 
     @Transactional
     public RfcResponse postCommentToRfc(Long rfcId, Long userId, CreateCommentRequest request) {
@@ -71,7 +76,7 @@ public class RfcService {
 
         commentRepository.save(comment);
 
-        return getRfcById(rfcId);
+        return toDetailedResponse(getRfcById(rfcId));
     }
 
     // ---------- US-12: Create RFC ----------
@@ -135,10 +140,10 @@ public class RfcService {
     }
 
     @Transactional(readOnly = true)
-    public RfcResponse getRfcById(Long rfcId) {
+    public RFC getRfcById(Long rfcId) {
         RFC rfc = rfcRepository.findById(rfcId)
                 .orElseThrow(() -> new RfcNotFoundException("RFC not found with id " + rfcId));
-        return toDetailedResponse(rfc);
+        return rfc;
     }
 
     /**
@@ -153,19 +158,19 @@ public class RfcService {
         // Determine if the requesting user is the author of the RFC
         boolean isAuthor = rfc.getUser().getId().equals(userId);
         return new RfcSpecificResponse(
-            rfc.getId(),
-            rfc.getTitle(),
-            rfc.getDescription(),
-            rfc.getUser() != null ? rfc.getUser().getId() : null,
-            rfc.getUser() != null ? rfc.getUser().getFirstname() : null, //Before getName
-            rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
-            rfc.getOrg() != null ? rfc.getOrg().getId() : null,
-            rfc.getStatus(),
-            rfc.getCreatedAt(),
-            rfc.getUpdatedAt(),
-            isAuthor,
-            detailedRfc.alternatives(),
-            detailedRfc.comments());
+                rfc.getId(),
+                rfc.getTitle(),
+                rfc.getDescription(),
+                rfc.getUser() != null ? rfc.getUser().getId() : null,
+                rfc.getUser() != null ? rfc.getUser().getFirstname() : null, // Before getName
+                rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
+                rfc.getOrg() != null ? rfc.getOrg().getId() : null,
+                rfc.getStatus(),
+                rfc.getCreatedAt(),
+                rfc.getUpdatedAt(),
+                isAuthor,
+                detailedRfc.alternatives(),
+                detailedRfc.comments());
     }
 
     private RfcResponse toResponse(RFC rfc) {
@@ -176,7 +181,7 @@ public class RfcService {
                 rfc.getTitle(),
                 rfc.getDescription(),
                 rfc.getUser() != null ? rfc.getUser().getId() : null,
-                rfc.getUser() != null ? rfc.getUser().getFirstname() : null, //Before getName
+                rfc.getUser() != null ? rfc.getUser().getFirstname() : null, // Before getName
                 rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
                 rfc.getOrg() != null ? rfc.getOrg().getId() : null,
                 rfc.getStatus(),
@@ -224,10 +229,10 @@ public class RfcService {
                 rfc.getOrg() != null ? rfc.getOrg().getId() : null,
                 rfc.getStatus(),
                 rfc.getCreatedAt(),
-            rfc.getUpdatedAt(),
-            (long) comments.size(),
-            alts,
-            threaded);
+                rfc.getUpdatedAt(),
+                (long) comments.size(),
+                alts,
+                threaded);
     }
 
     private CommentResponse buildThreaded(Comment comment, Map<Long, List<Comment>> childrenMap) {
@@ -407,6 +412,45 @@ public class RfcService {
         int yesCount = voteRepository.countByAlternativeAndOutcome(alternative, true);
         int noCount = voteRepository.countByAlternativeAndOutcome(alternative, false);
         return new VoteResponse(yesCount, noCount);
+    }
+
+    @Transactional
+    public void asignReviewersToRfc(ReviewersRequest reviewers, Long rfcId) {
+
+        List<Long> userIds = reviewers.userIds();
+        List<Long> contetxIds = reviewers.contextIds();
+        RFC rfc = getRfcById(rfcId);
+
+        if (!userIds.isEmpty()) {
+            List<User> users = userService.findAllUsersByid(userIds);
+
+            List<UserReviewer> userReviewers = users.stream()
+                    .map(user -> {
+                        UserRFCId id = new UserRFCId(user.getId(), rfcId);
+                        UserReviewer userReviewer = new UserReviewer(id, user, rfc);
+
+                        return userReviewer;
+                    })
+                    .toList();
+
+            userReviewerRepository.saveAll(userReviewers);
+        }
+
+        if (!contetxIds.isEmpty()) {
+            List<Context> contexts = contextService.findAllUsersByid(contetxIds);
+
+            List<ContextReviewer> contextReviewers = contexts.stream()
+                    .map(context -> {
+                        ContextRFCId id = new ContextRFCId(context.getId(), rfcId);
+                        ContextReviewer contextReviewer = new ContextReviewer(id, context, rfc);
+
+                        return contextReviewer;
+                    })
+                    .toList();
+
+            contextReviewerRepository.saveAll(contextReviewers);
+        }
+
     }
 
 }
