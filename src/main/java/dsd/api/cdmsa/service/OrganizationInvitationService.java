@@ -5,8 +5,10 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 
+import dsd.api.cdmsa.repository.OrganizationRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.*;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import dsd.api.cdmsa.dto.LinkResponse;
@@ -20,12 +22,14 @@ import dsd.api.cdmsa.model.UserPrincipal;
 import dsd.api.cdmsa.repository.OrganizationInvitationRepository;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 public class OrganizationInvitationService {
 
     private final OrganizationInvitationRepository invitationRepository;
+    private final OrganizationRepository organizationRepository;
 
     @Value("${app.frontend.base-url}")
     private String frontendBaseUrl;
@@ -85,5 +89,26 @@ public class OrganizationInvitationService {
     public Page<OrganizationInvitation> findAllInvitations(Long orgId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         return invitationRepository.findByOrgId(orgId, pageable);
+    }
+
+    @Transactional
+    public void deleteInvitation(Long invitationId, UserPrincipal principal) {
+        OrganizationInvitation invitation = invitationRepository.findById(invitationId)
+                .orElseThrow(() -> new InvitationNotFoundException(invitationId));
+
+        Organization org = organizationRepository.findById(principal.getOrgId())
+                .orElseThrow(() -> new InvitationNotFoundException(invitationId));
+
+        if (!invitation.getOrg().getId().equals(principal.getOrgId())) {
+            throw new AccessDeniedException("You cannot handle this organization's invitations");
+        }
+
+        if (!principal.getUser().getId().equals(org.getAdminUser().getId())) {
+            throw new AccessDeniedException("Only the admin can delete the organization's invitations");
+        }
+
+        // used a soft deletion (can be changed with really deletion from the db)
+        invitation.setState(OrganizationInvitation.State.DISABLED);
+        invitationRepository.save(invitation);
     }
 }
