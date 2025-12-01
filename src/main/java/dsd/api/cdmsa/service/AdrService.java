@@ -113,7 +113,10 @@ public class AdrService {
                         .map(r -> new PartecipatingUser(
                                 r.getUser().getId(),
                                 r.getUser().getFirstname() + " " + r.getUser().getLastname(),
-                                "REVIEWER"
+                                "REVIEWER",
+                                // TODO: delete null and use the commented line
+                                // r.getUser().getJobTitle()
+                                null
                         ))
                         .toList();
 
@@ -122,7 +125,10 @@ public class AdrService {
                         .map(o -> new PartecipatingUser(
                                 o.getUser().getId(),
                                 o.getUser().getFirstname() + " " + o.getUser().getLastname(),
-                                "OBSERVER"
+                                "OBSERVER",
+                                // TODO: delete null and use the commented line
+                                // o.getUser().getJobTitle()
+                                null
                         ))
                         .toList();
 
