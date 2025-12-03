@@ -193,4 +193,14 @@ public class RfcController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping(value = "{rfcId}/subscribe")
+    public ResponseEntity<Void> subscribeToRfc(
+            @PathVariable Long rfcId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        rfcService.subscribeToRfc(rfcId, principal);
+
+        return ResponseEntity.noContent().build();
+    }
+
 }

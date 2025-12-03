@@ -114,6 +114,7 @@
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/repository/OrganizationRepository.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/repository/RfcRepository.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/repository/TemplateRepository.java
+/home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/repository/UserObserverRepository.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/repository/UserRepository.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/repository/UserReviewerRepository.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/repository/VoteRepository.java

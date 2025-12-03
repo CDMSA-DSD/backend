@@ -39,6 +39,7 @@ public class RfcService {
     private final VoteRepository voteRepository;
     private final UserReviewerRepository userReviewerRepository;
     private final ContextReviewerRepository contextReviewerRepository;
+    private final UserObserverRepository userObserverRepository;
 
     private final UserService userService;
     private final ContextService contextService;
@@ -172,6 +173,8 @@ public class RfcService {
         // Determine if the requesting user is the author of the RFC
         boolean isAuthor = rfc.getUser().getId().equals(userId);
 
+        boolean isWatching = userObserverRepository.existsById(new UserRFCId(userId, rfcId));
+
         List<EntityModel<UserSummaryResponse>> userReviewers = userReviewerRepository.findAllByRfc(rfc).stream()
                 .map(reviewer -> userSummaryModelAssembler.toModel(reviewer.getUser()))
                 .toList();
@@ -192,6 +195,7 @@ public class RfcService {
                 rfc.getCreatedAt(),
                 rfc.getUpdatedAt(),
                 isAuthor,
+                isWatching,
                 userReviewers,
                 contextReviewrs,
                 detailedRfc.alternatives(),
@@ -498,6 +502,23 @@ public class RfcService {
 
         }
         return isReviewer;
+    }
+
+    public void subscribeToRfc(Long rfcId, UserPrincipal principal) {
+        if (!rfcRepository.existsByIdAndOrgId(rfcId, principal.getOrgId())) {
+            throw new RfcNotFoundException("RFC not found.");
+        }
+
+        User user = principal.getUser();
+        RFC rfc = getRfcById(rfcId);
+
+        UserRFCId id = new UserRFCId(rfcId, user.getId());
+        Observer observer = new Observer();
+        observer.setId(id);
+        observer.setRfc(rfc);
+        observer.setUser(user);
+
+        userObserverRepository.save(observer);
     }
 
 }
