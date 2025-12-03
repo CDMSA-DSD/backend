@@ -34,7 +34,7 @@ public class RfcController {
     private final RfcService rfcService;
     private final LLMService llmService;
 
-    // post a new comment under the rfc identified by id
+    // Post a new comment under the rfc identified by id
     @PostMapping("/{id}/comments")
     @PreAuthorize("@permissionService.canReviewRfc(principal,#id)")
     public ResponseEntity<RfcResponse> postCommentToRfc(
@@ -43,7 +43,7 @@ public class RfcController {
             @AuthenticationPrincipal UserPrincipal principal) {
 
         User user = principal.getUser();
-        RfcResponse response = rfcService.postCommentToRfc(id, user.getId(), request);
+        RfcResponse response = rfcService.postCommentToRfc(id, user, request);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

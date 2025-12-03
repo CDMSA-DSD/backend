@@ -4,14 +4,18 @@ import dsd.api.cdmsa.assembler.ContextSummaryModelAssembler;
 import dsd.api.cdmsa.assembler.UserSummaryModelAssembler;
 import dsd.api.cdmsa.dto.*;
 import dsd.api.cdmsa.model.*;
+import dsd.api.cdmsa.model.event.UserMentionCreatedEvent;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import dsd.api.cdmsa.repository.*;
 import jakarta.persistence.EntityNotFoundException;
+
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.hateoas.EntityModel;
@@ -47,26 +51,29 @@ public class RfcService {
     private final UserSummaryModelAssembler userSummaryModelAssembler;
     private final ContextSummaryModelAssembler contextSummaryModelAssembler;
 
-    @Transactional
-    public RfcResponse postCommentToRfc(Long rfcId, Long userId, CreateCommentRequest request) {
-        // in the future we should check that the user must be a reviewer of the RFC in
-        // order to post a comment
-        // ...
+    private final ApplicationEventPublisher eventPublisher;
 
-        RFC rfc = rfcRepository.findById(rfcId)
-                .orElseThrow(() -> new RfcNotFoundException("RFC not found"));
+    @Transactional
+    public RfcResponse postCommentToRfc(Long rfcId, User author, CreateCommentRequest request) {
+
+        RFC rfc = getRfcById(rfcId);
 
         if (rfc.getStatus() != RFC.Status.UNDER_REVIEW) {
             throw new RfcBadRequestException("Comments are not allowed on closed RFCs");
         }
 
-        User author = userRepository.findById(userId)
-                .orElseThrow(() -> new RfcNotFoundException("User not found"));
-
         Comment comment = new Comment();
         comment.setAuthor(author);
         comment.setContent(request.content().trim());
         comment.setRfc(rfc);
+
+        Set<User> mentions = null;
+
+        // If the request have mention, we handle it
+        if (request.mentions() != null && !request.mentions().isEmpty()) {
+            mentions = userService.findAllUsersByid(request.mentions()).stream().collect(Collectors.toSet());
+            mentions.forEach(comment::addMention);
+        }
 
         // IF parentId is not null, add a parent-child relationship
         if (request.parentId() != null) {
@@ -81,7 +88,17 @@ public class RfcService {
             comment.setParent(parent);
         }
 
-        commentRepository.save(comment);
+        comment = commentRepository.save(comment);
+
+        if (mentions != null) {
+            UserMentionCreatedEvent event = new UserMentionCreatedEvent(
+                comment.getId(),
+                author.getId(),
+                mentions.stream().map(User :: getId).toList()
+            );
+
+            eventPublisher.publishEvent(event);        
+        }
 
         return toDetailedResponse(getRfcById(rfcId));
     }
@@ -127,7 +144,7 @@ public class RfcService {
         // Persist and map
         RFC saved = rfcRepository.save(rfc);
 
-        asignReviewersToRfc(new ReviewersRequest(List.of(userId),null), saved.getId());
+        asignReviewersToRfc(new ReviewersRequest(List.of(userId), null), saved.getId());
 
         return toResponse(saved);
     }
@@ -483,7 +500,7 @@ public class RfcService {
     }
 
     public boolean isReviewer(User user, Long rfcId) {
-    
+
         boolean isReviewer = false;
 
         UserRFCId uId = new UserRFCId(user.getId(), rfcId);

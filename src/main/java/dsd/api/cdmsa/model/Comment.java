@@ -1,5 +1,7 @@
 package dsd.api.cdmsa.model;
 
+import java.util.Set;
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -52,4 +54,19 @@ public class Comment {
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.Set<Comment> replies = new java.util.HashSet<>();
+
+    @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<UserMention> mentions = new java.util.HashSet<>();
+
+
+    public void addMention(User user){
+        UserMention mention = new UserMention(
+            new UserCommentId(user.getId(),this.id),
+            user,
+            this
+        );
+        this.mentions.add(mention);
+        user.getMentions().add(mention);
+    }
+
 }

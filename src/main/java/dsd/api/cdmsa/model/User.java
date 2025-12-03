@@ -67,6 +67,10 @@ public class User extends RepresentationModel<User> {
     @OneToMany(mappedBy = "createdBy", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<OrganizationInvitation> invitations = new HashSet<>();
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<UserMention> mentions = new java.util.HashSet<>();
+
+
     @PrePersist
     protected void onCreate() {
         this.joinedAt = Instant.now();
