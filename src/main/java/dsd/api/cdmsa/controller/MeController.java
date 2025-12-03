@@ -6,7 +6,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import dsd.api.cdmsa.assembler.OrgModelAssembler;
-import dsd.api.cdmsa.assembler.UserModelAssembler;
+import dsd.api.cdmsa.assembler.UserResponseModelAssembler;
 import dsd.api.cdmsa.dto.OrganizationResponseAlt;
 import dsd.api.cdmsa.dto.UserResponse;
 import dsd.api.cdmsa.model.Organization;
@@ -23,7 +23,7 @@ public class MeController {
 
     private final OrgService orgService;
 
-    private UserModelAssembler userModelAssembler;
+    private UserResponseModelAssembler userResponseModelAssembler;
     private OrgModelAssembler orgModelAssembler;
 
     @GetMapping
@@ -32,7 +32,7 @@ public class MeController {
 
         User user = principal.getUser();
 
-        return ResponseEntity.ok(userModelAssembler.toModel(user));
+        return ResponseEntity.ok(userResponseModelAssembler.toModel(user));
     }
 
     @GetMapping("/org")

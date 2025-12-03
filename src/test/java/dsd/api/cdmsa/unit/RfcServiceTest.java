@@ -6,7 +6,6 @@ import dsd.api.cdmsa.model.*;
 import dsd.api.cdmsa.repository.*;
 import dsd.api.cdmsa.service.RfcService;
 
-import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -128,7 +127,7 @@ class RfcServiceTest {
     // ------------------------------------------------------------
     // getRfcById / listRfcs / listRfcsByOrg
     // ------------------------------------------------------------
-/*
+
     @Test
     void getRfcById_shouldReturnRfc_whenExists() {
         RFC rfc = new RFC();
@@ -139,12 +138,12 @@ class RfcServiceTest {
         when(alternativeRepository.findByRfcId(100L)).thenReturn(Collections.emptyList());
         when(commentRepository.findByRfcId(100L)).thenReturn(Collections.emptyList());
 
-        RfcResponse response = rfcService.getRfcById(100L);
+        RFC response = rfcService.getRfcById(100L);
 
         assertNotNull(response);
         verify(rfcRepository).findById(100L);
     }
-        */
+        
 
     @Test
     void getRfcById_shouldThrowNotFound_whenDoesNotExist() {

@@ -18,10 +18,12 @@ import dsd.api.cdmsa.dto.UpdateContextRequest;
 import dsd.api.cdmsa.exception.ContextBadRequestException;
 import dsd.api.cdmsa.exception.ContextForbiddenException;
 import dsd.api.cdmsa.exception.ContextNotFoundException;
+import dsd.api.cdmsa.exception.UserNotFoundException;
 import dsd.api.cdmsa.model.Context;
 import dsd.api.cdmsa.model.ContextMembership;
 import dsd.api.cdmsa.model.Organization;
 import dsd.api.cdmsa.model.User;
+import dsd.api.cdmsa.model.UserPrincipal;
 import dsd.api.cdmsa.repository.ContextMembershipRepository;
 import dsd.api.cdmsa.repository.ContextRepository;
 import dsd.api.cdmsa.repository.UserRepository;
@@ -79,21 +81,14 @@ public class ContextService {
 
     // returns true if user can manage members of this contexts (org admins or
     // (this) context admins)
-    private boolean canManageContextMembers(User user, Context context) {
-        Organization org = context.getOrganization();
-
-        // Org admin can always manage
-        if (isOrganizationAdmin(user, org)) {
-            return true;
-        }
-
+    public boolean isContextAdmin(User user, Long contextId) {
         // Context admin can manage only this context
         return membershipRepository.existsByContextIdAndUserIdAndContextAdminTrue(
-                context.getId(), user.getId());
+                contextId, user.getId()) || isOrganizationAdmin(user, user.getOrg());
     }
 
     private void ensureCanManageContextMembers(User user, Context context) {
-        if (!canManageContextMembers(user, context)) {
+        if (!isContextAdmin(user, context.getId())) {
             throw new ContextForbiddenException(
                     "Only organization admins or context admins can manage members");
         }
@@ -155,8 +150,7 @@ public class ContextService {
                 .toList();
     }
 
-   
-    public List<Context> findAllUsersByid(List<Long> contextIds) {
+    public List<Context> findAllContextByid(List<Long> contextIds) {
         List<Context> contexts = contextRepository.findAllById(contextIds);
 
         Set<Long> foundIds = contexts.stream()
@@ -168,7 +162,10 @@ public class ContextService {
                 .toList();
 
         if (!missing.isEmpty()) {
-            throw new ContextNotFoundException("Contexts " + missing + " not found.");
+            String m = missing.stream()
+                    .map(String::valueOf)
+                    .collect(Collectors.joining(", "));
+            throw new ContextNotFoundException("Contexts " + m + " not found.");
         }
 
         return contexts;
@@ -190,6 +187,13 @@ public class ContextService {
                 .orElseThrow(() -> new ContextNotFoundException("Context not found"));
 
         return ContextResponse.fromEntity(context);
+    }
+
+    public Context findContextById(Long contextId) {
+        Context context = contextRepository.findById(contextId)
+                .orElseThrow(() -> new ContextNotFoundException("Context not found"));
+
+        return context;
     }
 
     // ---------- US-08: Update Context (name / optional fields) ----------
@@ -328,7 +332,7 @@ public class ContextService {
         User actingUser = getCurrentUserOrThrow(userId);
         Context context = loadContextOrThrow(contextId);
 
-        if (!canManageContextMembers(actingUser, context)) {
+        if (!isContextAdmin(actingUser, context.getId())) {
             throw new ContextForbiddenException(
                     "Only organization admins or context admins can view context admins");
         }
@@ -340,14 +344,22 @@ public class ContextService {
                 .toList();
     }
 
+    // ------- List current context for a especific user
+
+    @Transactional(readOnly = true)
+    public List<ContextMembership> findContextByUser(User user) {
+        return membershipRepository.findByUserId(user.getId());
+
+    }
+
     // ------- List current context for a especific context admin (for /login)
 
     @Transactional(readOnly = true)
     public List<ContextByAdminResponse> findContextByAdmin(User user) {
 
-        List<ContextMembership> context = membershipRepository.findByUserIdAndContextAdminTrue(user.getId());
+        List<ContextMembership> contexts = membershipRepository.findByUserIdAndContextAdminTrue(user.getId());
 
-        return context.stream()
+        return contexts.stream()
                 .map(ContextByAdminResponse::fromMembership)
                 .toList();
     }
@@ -360,34 +372,19 @@ public class ContextService {
     // if they are a member of the organization -----------------
 
     @Transactional
-    public ContextMemberResponse addMember(Long actingUserId, Long contextId, AddContextMemberRequest request) {
+    public ContextMemberResponse addMember(UserPrincipal principal, Long contextId, AddContextMemberRequest request) {
 
-        if (request == null || request.email() == null || request.email().isBlank()) {
-            throw new ContextBadRequestException("Email is required");
-        }
-
-        User actingUser = getCurrentUserOrThrow(actingUserId);
-        Context context = contextRepository.findById(contextId)
-                .orElseThrow(() -> new ContextNotFoundException("Context not found"));
-
-        Organization org = context.getOrganization();
-
-        if (!org.getId().equals(actingUser.getOrg().getId())) {
-            throw new ContextForbiddenException("You do not belong to this organization");
-        }
-
-        ensureCanManageContextMembers(actingUser, context);
-
-        User targetUser = userRepository.findByEmail(request.email().trim())
-                .orElseThrow(() -> new ContextBadRequestException("User with this email does not exist"));
-
-        if (targetUser.getOrg() == null || !targetUser.getOrg().getId().equals(org.getId())) {
-            throw new ContextBadRequestException("User does not belong to this organization");
+        User targetUser = userRepository.findByEmail(request.email())
+                .orElseThrow(() -> new UserNotFoundException(request.email()));
+        if (!targetUser.getOrg().getId().equals(principal.getOrgId())) {
+            throw new UserNotFoundException(request.email());
         }
 
         if (membershipRepository.existsByContextIdAndUserId(contextId, targetUser.getId())) {
             throw new ContextBadRequestException("User is already a member of this context");
         }
+
+        Context context = findContextById(contextId);
 
         ContextMembership membership = new ContextMembership();
         membership.setContext(context);
@@ -437,7 +434,7 @@ public class ContextService {
                 .orElseThrow(() -> new ContextNotFoundException("Context not found"));
 
         // only org admins or context admins can list members
-        if (!canManageContextMembers(actingUser, context)) {
+        if (!isContextAdmin(actingUser, context.getId())) {
             throw new ContextForbiddenException(
                     "Only organization admins or context admins can view context members");
         }

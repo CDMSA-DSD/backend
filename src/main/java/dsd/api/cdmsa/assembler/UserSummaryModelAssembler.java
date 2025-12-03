@@ -9,21 +9,22 @@ import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 import dsd.api.cdmsa.controller.UserController;
-import dsd.api.cdmsa.dto.UserResponse;
-import dsd.api.cdmsa.mapper.UserMapper;
+import dsd.api.cdmsa.dto.UserSummaryResponse;
 import dsd.api.cdmsa.model.User;
 
 @Component
-public class UserModelAssembler implements RepresentationModelAssembler<User, EntityModel<UserResponse>> {
+public class UserSummaryModelAssembler implements RepresentationModelAssembler<User, EntityModel<UserSummaryResponse>> {
 
     @Override
     @NonNull
-    public EntityModel<UserResponse> toModel(User user) {
-        UserResponse dto = UserMapper.toDto(user);
+    public EntityModel<UserSummaryResponse> toModel(User user) {
+        UserSummaryResponse dto = UserSummaryResponse.fromEntity(user);
 
         return EntityModel.of(dto,
                 // self link: GET /users/{id}
                 linkTo(methodOn(UserController.class).getUser(user.getId())).withSelfRel());
 
     }
+
+    
 }

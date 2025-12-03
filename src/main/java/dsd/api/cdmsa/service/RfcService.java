@@ -1,5 +1,7 @@
 package dsd.api.cdmsa.service;
 
+import dsd.api.cdmsa.assembler.ContextSummaryModelAssembler;
+import dsd.api.cdmsa.assembler.UserSummaryModelAssembler;
 import dsd.api.cdmsa.dto.*;
 import dsd.api.cdmsa.model.*;
 
@@ -12,6 +14,7 @@ import dsd.api.cdmsa.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import dsd.api.cdmsa.exception.RfcAlternativeBadRequestException;
@@ -39,6 +42,9 @@ public class RfcService {
 
     private final UserService userService;
     private final ContextService contextService;
+
+    private final UserSummaryModelAssembler userSummaryModelAssembler;
+    private final ContextSummaryModelAssembler contextSummaryModelAssembler;
 
     @Transactional
     public RfcResponse postCommentToRfc(Long rfcId, Long userId, CreateCommentRequest request) {
@@ -119,7 +125,15 @@ public class RfcService {
 
         // Persist and map
         RFC saved = rfcRepository.save(rfc);
+
+        asignReviewersToRfc(new ReviewersRequest(List.of(userId),null), saved.getId());
+
         return toResponse(saved);
+    }
+
+    public boolean isAuthor(User user, Long rfcId) {
+        RFC rfc = getRfcById(rfcId);
+        return rfc.getUser().getId().equals(user.getId());
     }
 
     @Transactional(readOnly = true)
@@ -157,6 +171,15 @@ public class RfcService {
         RfcResponse detailedRfc = toDetailedResponse(rfc);
         // Determine if the requesting user is the author of the RFC
         boolean isAuthor = rfc.getUser().getId().equals(userId);
+
+        List<EntityModel<UserSummaryResponse>> userReviewers = userReviewerRepository.findAllByRfc(rfc).stream()
+                .map(reviewer -> userSummaryModelAssembler.toModel(reviewer.getUser()))
+                .toList();
+
+        List<EntityModel<ContextSummaryResponse>> contextReviewrs = contextReviewerRepository.findAllByRfc(rfc).stream()
+                .map(context -> contextSummaryModelAssembler.toModel(context.getContext()))
+                .toList();
+
         return new RfcSpecificResponse(
                 rfc.getId(),
                 rfc.getTitle(),
@@ -169,6 +192,8 @@ public class RfcService {
                 rfc.getCreatedAt(),
                 rfc.getUpdatedAt(),
                 isAuthor,
+                userReviewers,
+                contextReviewrs,
                 detailedRfc.alternatives(),
                 detailedRfc.comments());
     }
@@ -421,7 +446,7 @@ public class RfcService {
         List<Long> contetxIds = reviewers.contextIds();
         RFC rfc = getRfcById(rfcId);
 
-        if (!userIds.isEmpty()) {
+        if (userIds != null && !userIds.isEmpty()) {
             List<User> users = userService.findAllUsersByid(userIds);
 
             List<UserReviewer> userReviewers = users.stream()
@@ -436,8 +461,8 @@ public class RfcService {
             userReviewerRepository.saveAll(userReviewers);
         }
 
-        if (!contetxIds.isEmpty()) {
-            List<Context> contexts = contextService.findAllUsersByid(contetxIds);
+        if (contetxIds != null && !contetxIds.isEmpty()) {
+            List<Context> contexts = contextService.findAllContextByid(contetxIds);
 
             List<ContextReviewer> contextReviewers = contexts.stream()
                     .map(context -> {
@@ -451,6 +476,28 @@ public class RfcService {
             contextReviewerRepository.saveAll(contextReviewers);
         }
 
+    }
+
+    public boolean isReviewer(User user, Long rfcId) {
+    
+        boolean isReviewer = false;
+
+        UserRFCId uId = new UserRFCId(user.getId(), rfcId);
+        isReviewer = userReviewerRepository.existsById(uId);
+
+        if (!isReviewer) {
+            List<ContextMembership> contexts = contextService.findContextByUser(user);
+            if (!contexts.isEmpty()) {
+                ContextRFCId cId = new ContextRFCId();
+                cId.setRfcId(rfcId);
+                for (ContextMembership contextMembership : contexts) {
+                    cId.setContextId(contextMembership.getContext().getId());
+                    isReviewer |= contextReviewerRepository.existsById(cId);
+                }
+            }
+
+        }
+        return isReviewer;
     }
 
 }

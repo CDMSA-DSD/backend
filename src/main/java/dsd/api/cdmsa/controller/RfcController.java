@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 
 import dsd.api.cdmsa.service.RfcService;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import dsd.api.cdmsa.model.User;
 import dsd.api.cdmsa.model.UserPrincipal;
@@ -35,6 +36,7 @@ public class RfcController {
 
     // post a new comment under the rfc identified by id
     @PostMapping("/{id}/comments")
+    @PreAuthorize("@permissionService.canReviewRfc(principal,#id)")
     public ResponseEntity<RfcResponse> postCommentToRfc(
             @PathVariable Long id,
             @Valid @RequestBody CreateCommentRequest request,
@@ -106,6 +108,7 @@ public class RfcController {
      * Status: 201 Created
      */
     @PostMapping("/{rfcId}/alternatives")
+    @PreAuthorize("@permissionService.canReviewRfc(principal,#id)")
     public ResponseEntity<AlternativeResponse> createAlternative(
             @PathVariable Long rfcId,
             @RequestBody CreateAlternativeRequest request,
@@ -138,6 +141,7 @@ public class RfcController {
     // ------------------------ Close RFC ----------------------
 
     @PostMapping("/{rfcId}/close")
+    @PreAuthorize("@permissionService.canManageRfc(principal,#id)")
     public ResponseEntity<RfcResponse> closeRfc(
             @PathVariable Long rfcId,
             @RequestBody CloseRfcRequest request,
@@ -149,6 +153,7 @@ public class RfcController {
     }
 
     @PostMapping("/alternatives/{altId}/vote")
+    @PreAuthorize("@permissionService.canReviewRfc(principal,#id)")
     public ResponseEntity<VoteResponse> voteForAlternative(
             @PathVariable Long altId,
             @RequestBody VoteRequest voteRequest,
@@ -165,6 +170,7 @@ public class RfcController {
 
     // generate ADR of the RFC using LLM
     @PostMapping("/{rfcId}/generateadr")
+    @PreAuthorize("@permissionService.canManageRfc(principal,#id)")
     public ResponseEntity<GenerateAdrResponse> createDraftFromRfcAndAlternative(
             @PathVariable Long rfcId,
             @RequestBody GenerateAdrRequest request,
@@ -177,6 +183,7 @@ public class RfcController {
     }
 
     @PostMapping(value = "/{id}/reviewers")
+    @PreAuthorize("@permissionService.canManageRfc(principal,#id)")
     public ResponseEntity<Void> asignReviewersToRfc(
             @PathVariable Long id,
             @RequestBody ReviewersRequest reviewers) {

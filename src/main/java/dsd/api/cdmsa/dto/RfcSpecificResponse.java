@@ -2,6 +2,8 @@ package dsd.api.cdmsa.dto;
 
 import java.util.List;
 
+import org.springframework.hateoas.EntityModel;
+
 import dsd.api.cdmsa.model.RFC;
 
 public record RfcSpecificResponse(
@@ -16,6 +18,8 @@ public record RfcSpecificResponse(
         java.time.Instant createdAt,
         java.time.Instant updatedAt,
         boolean isAuthor,
+        List<EntityModel<UserSummaryResponse>> userReviewers,
+        List<EntityModel<ContextSummaryResponse>> contextReviewers,
         List<AlternativeResponse> alternatives,
         List<CommentResponse> comments) {
 

@@ -20,7 +20,6 @@ import dsd.api.cdmsa.dto.UserResponse;
 import dsd.api.cdmsa.exception.UserExistsException;
 import dsd.api.cdmsa.exception.UserNotFoundException;
 import dsd.api.cdmsa.model.OrganizationInvitation;
-import dsd.api.cdmsa.mapper.UserMapper;
 import dsd.api.cdmsa.model.User;
 import dsd.api.cdmsa.model.UserPrincipal;
 import dsd.api.cdmsa.repository.UserRepository;
@@ -83,7 +82,8 @@ public class UserService {
             boolean isAdmin = isOrgAdmin(user);
             List<ContextByAdminResponse> contextsIsAdmin = contextService.findContextByAdmin(user);
 
-            UserResponse dto = UserMapper.toDto(user);
+            UserResponse dto = UserResponse.fromEntity(user);
+
             return new LoginResponse(dto, token, isAdmin, contextsIsAdmin);
 
         } else {
@@ -103,10 +103,6 @@ public class UserService {
         } else {
             throw new InvalidParameterException();
         }
-    }
-
-    public boolean isOrgAdmin(User user) {
-        return user.getId().equals(user.getOrg().getAdminUser().getId());
     }
 
     public User searchById(Long id) {
@@ -139,6 +135,10 @@ public class UserService {
 
     public boolean existUserById(Long id) {
         return repository.existsById(id);
+    }
+
+    public boolean isOrgAdmin(User user) {
+        return user.getId().equals(user.getOrg().getAdminUser().getId());
     }
 
     public void deleteUser(Long id) {

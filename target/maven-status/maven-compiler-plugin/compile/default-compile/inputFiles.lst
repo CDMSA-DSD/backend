@@ -1,7 +1,11 @@
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/CdmsaApplication.java
+/home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/assembler/ContextResponseModelAssembler.java
+/home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/assembler/ContextSummaryModelAssembler.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/assembler/InvitationModelAssembler.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/assembler/OrgModelAssembler.java
-/home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/assembler/UserModelAssembler.java
+/home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/assembler/UserResponseModelAssembler.java
+/home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/assembler/UserSummaryModelAssembler.java
+/home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/bootstrap/DefaultTemplateLoader.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/config/AppConfig.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/config/JwtFilter.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/config/SecurityConfig.java
@@ -27,6 +31,7 @@
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/ContextByAdminResponse.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/ContextMemberResponse.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/ContextResponse.java
+/home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/ContextSummaryResponse.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/CreateAdrRequest.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/CreateAlternativeRequest.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/CreateCommentRequest.java
@@ -54,6 +59,7 @@
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/UpdateContextRequest.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/UpdateOrganizationRequest.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/UserResponse.java
+/home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/UserSummaryResponse.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/VoteRequest.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/VoteResponse.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/exception/ContextBadRequestException.java
@@ -80,7 +86,6 @@
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/exception/UserNotFoundException.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/mapper/InvitationMapper.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/mapper/OrgMapper.java
-/home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/mapper/UserMapper.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/model/ADR.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/model/Alternative.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/model/Comment.java
