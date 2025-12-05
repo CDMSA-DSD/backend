@@ -43,7 +43,7 @@ public class RfcController {
             @AuthenticationPrincipal UserPrincipal principal) {
 
         User user = principal.getUser();
-        RfcResponse response = rfcService.postCommentToRfc(id, user, request);
+        RfcResponse response = rfcService.postCommentToRfc(id, user, principal.getOrgId(), request);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -108,10 +108,10 @@ public class RfcController {
      * Status: 201 Created
      */
     @PostMapping("/{rfcId}/alternatives")
-    @PreAuthorize("@permissionService.canReviewRfc(principal,#id)")
+    @PreAuthorize("@permissionService.canReviewRfc(principal,#rfcId)")
     public ResponseEntity<AlternativeResponse> createAlternative(
             @PathVariable Long rfcId,
-            @RequestBody CreateAlternativeRequest request,
+            @RequestBody @Valid CreateAlternativeRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
 
         User user = principal.getUser();
@@ -141,7 +141,7 @@ public class RfcController {
     // ------------------------ Close RFC ----------------------
 
     @PostMapping("/{rfcId}/close")
-    @PreAuthorize("@permissionService.canManageRfc(principal,#id)")
+    @PreAuthorize("@permissionService.canManageRfc(principal,#rfcId)")
     public ResponseEntity<RfcResponse> closeRfc(
             @PathVariable Long rfcId,
             @RequestBody CloseRfcRequest request,
@@ -153,7 +153,7 @@ public class RfcController {
     }
 
     @PostMapping("/alternatives/{altId}/vote")
-    @PreAuthorize("@permissionService.canReviewRfc(principal,#id)")
+    @PreAuthorize("@permissionService.canReviewRfc(principal,#altId)")
     public ResponseEntity<VoteResponse> voteForAlternative(
             @PathVariable Long altId,
             @RequestBody VoteRequest voteRequest,
@@ -170,7 +170,7 @@ public class RfcController {
 
     // generate ADR of the RFC using LLM
     @PostMapping("/{rfcId}/generateadr")
-    @PreAuthorize("@permissionService.canManageRfc(principal,#id)")
+    @PreAuthorize("@permissionService.canManageRfc(principal,#rfcId)")
     public ResponseEntity<GenerateAdrResponse> createDraftFromRfcAndAlternative(
             @PathVariable Long rfcId,
             @RequestBody GenerateAdrRequest request,
@@ -185,10 +185,11 @@ public class RfcController {
     @PostMapping(value = "/{id}/reviewers")
     @PreAuthorize("@permissionService.canManageRfc(principal,#id)")
     public ResponseEntity<Void> asignReviewersToRfc(
+            @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long id,
             @RequestBody ReviewersRequest reviewers) {
 
-        rfcService.asignReviewersToRfc(reviewers, id);
+        rfcService.asignReviewersToRfc(reviewers, id, principal.getOrgId());
 
         return ResponseEntity.noContent().build();
     }

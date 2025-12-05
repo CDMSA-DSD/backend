@@ -4,7 +4,6 @@ import java.time.Instant;
 import java.util.Set;
 
 import org.hibernate.annotations.CreationTimestamp;
-import org.springframework.hateoas.RepresentationModel;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -32,7 +31,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Context extends RepresentationModel<Context> {
+public class Context {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

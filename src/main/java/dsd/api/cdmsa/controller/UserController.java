@@ -41,7 +41,6 @@ public class UserController {
 
     // GET users (collection)
     @GetMapping
-    @PreAuthorize("@permissionService.canManageOrg(principal)")
     public ResponseEntity<PagedModel<EntityModel<UserResponse>>> getAllUsers(
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam(defaultValue = "0", required = false) int page,

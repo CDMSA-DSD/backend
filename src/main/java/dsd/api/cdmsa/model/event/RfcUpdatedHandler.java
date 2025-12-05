@@ -18,28 +18,23 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j // create log
 @Component
 @RequiredArgsConstructor
-public class UserMentionEventHandler {
+public class RfcUpdatedHandler {
 
     private final UserService userService;
     private final NotificationRepository notificationRepository;
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handle(UserMentionCreatedEvent event) {
-        log.info("AFTER_COMMIT -> Mention created commentId={}, authorId={}, mentionedUserIds={}",
-                event.commentId(), event.authorEmail(), event.mentionedUserIds());
+    public void handle(RfcUpdatedEvent event) {
+        List<User> subscribers = userService.findAllUsersByid(event.subscribersId(), event.orgId());
 
-        List<User> mentionedUsers = userService.findAllUsersByid(event.mentionedUserIds(), event.orgId());
-
-        List<Notification> notis = mentionedUsers.stream()
+        List<Notification> notis = subscribers.stream()
                 .map(targetUser -> {
                     Notification noti = new Notification();
 
                     noti.setTargetUser(targetUser);
-                    noti.setMessage(event.authorEmail() + " has mentioned you");
-                    noti.setDetails(event.briefComment());
-                    noti.setCommentId(event.commentId());
-                    noti.setType(NotificationType.MENTION);
+                    noti.setMessage(event.rfcTitle() + " has been updated.");
+                    noti.setType(NotificationType.RFC_UPDATE);
                     noti.setRfcId(event.rfcId());
 
                     return noti;

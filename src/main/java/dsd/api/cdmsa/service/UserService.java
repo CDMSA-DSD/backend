@@ -115,8 +115,8 @@ public class UserService {
         return repository.findByOrgId(orgId, pageable);
     }
 
-    public List<User> findAllUsersByid(List<Long> userIds) {
-        List<User> users = repository.findAllById(userIds);
+    public List<User> findAllUsersByid(List<Long> userIds, Long orgId) {
+        List<User> users = repository.findByIdInAndOrgId(userIds, orgId);
 
         Set<Long> foundIds = users.stream()
                 .map(User::getId)
@@ -129,7 +129,6 @@ public class UserService {
         if (!missing.isEmpty()) {
             throw new UserNotFoundException(missing);
         }
-
         return users;
     }
 

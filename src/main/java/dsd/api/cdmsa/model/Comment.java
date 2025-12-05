@@ -14,6 +14,8 @@ import lombok.*;
 @AllArgsConstructor
 public class Comment {
 
+    private final int MAX_CONTENT_FOR_NOTI = 20;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -67,6 +69,22 @@ public class Comment {
         );
         this.mentions.add(mention);
         user.getMentions().add(mention);
+    }
+
+    public String getSummary(){
+        if (content.length() <= MAX_CONTENT_FOR_NOTI) {
+            return content;
+        }
+        
+        String cut = content.substring(0, MAX_CONTENT_FOR_NOTI);
+
+        int lastSpace = cut.lastIndexOf("");
+        if (lastSpace > 0) {
+            cut = cut.substring(0,lastSpace);
+        }
+
+        return cut + "...";
+
     }
 
 }

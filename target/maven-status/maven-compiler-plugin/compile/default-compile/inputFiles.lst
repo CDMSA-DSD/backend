@@ -2,6 +2,7 @@
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/assembler/ContextResponseModelAssembler.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/assembler/ContextSummaryModelAssembler.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/assembler/InvitationModelAssembler.java
+/home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/assembler/NotificationResponseModelAssembler.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/assembler/OrgModelAssembler.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/assembler/UserResponseModelAssembler.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/assembler/UserSummaryModelAssembler.java
@@ -44,6 +45,8 @@
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/LinkResponse.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/LoginRequest.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/LoginResponse.java
+/home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/NotificationResponse.java
+/home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/NotificationStatusResponse.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/OrgAdminRequest.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/OrgAdminResponse.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/OrganizationResponse.java
@@ -72,6 +75,8 @@
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/exception/InvitationExpiredException.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/exception/InvitationInvalidException.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/exception/InvitationNotFoundException.java
+/home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/exception/NotificationExceptionAdvice.java
+/home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/exception/NotificationNotFoundException.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/exception/OrgExceptionAdvice.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/exception/OrgExistsException.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/exception/OrgNotFoundException.java
@@ -94,6 +99,7 @@
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/model/ContextMembership.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/model/ContextRFCId.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/model/ContextReviewer.java
+/home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/model/Notification.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/model/Observer.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/model/Organization.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/model/OrganizationInvitation.java
@@ -107,6 +113,8 @@
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/model/UserRFCId.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/model/UserReviewer.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/model/Vote.java
+/home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/model/event/RfcUpdatedEvent.java
+/home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/model/event/RfcUpdatedHandler.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/model/event/UserMentionCreatedEvent.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/model/event/UserMentionEventHandler.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/repository/AdrRepository.java
@@ -115,6 +123,7 @@
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/repository/ContextMembershipRepository.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/repository/ContextRepository.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/repository/ContextReviewerRepository.java
+/home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/repository/NotificationRepository.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/repository/OrganizationInvitationRepository.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/repository/OrganizationRepository.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/repository/RfcRepository.java
@@ -128,6 +137,7 @@
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/service/ContextService.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/service/JWTService.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/service/LLMService.java
+/home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/service/NotificationService.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/service/OrgService.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/service/OrganizationInvitationService.java
 /home/gabriel/Uni/4ºaño/1S/DSD/backend/src/main/java/dsd/api/cdmsa/service/PermissionService.java

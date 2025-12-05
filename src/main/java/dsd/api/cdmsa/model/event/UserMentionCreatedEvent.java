@@ -4,6 +4,9 @@ import java.util.List;
 
 public record UserMentionCreatedEvent(
     Long commentId,
-    Long authorId,
+    Long orgId,
+    Long rfcId,
+    String briefComment,
+    String authorEmail,
     List<Long> mentionedUserIds
 ) {}

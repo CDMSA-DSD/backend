@@ -3,8 +3,6 @@ package dsd.api.cdmsa.model;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.springframework.hateoas.RepresentationModel;
-
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -15,7 +13,7 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Organization extends RepresentationModel<Organization>{
+public class Organization {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

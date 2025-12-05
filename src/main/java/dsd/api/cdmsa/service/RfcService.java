@@ -4,6 +4,7 @@ import dsd.api.cdmsa.assembler.ContextSummaryModelAssembler;
 import dsd.api.cdmsa.assembler.UserSummaryModelAssembler;
 import dsd.api.cdmsa.dto.*;
 import dsd.api.cdmsa.model.*;
+import dsd.api.cdmsa.model.event.RfcUpdatedEvent;
 import dsd.api.cdmsa.model.event.UserMentionCreatedEvent;
 
 import java.util.List;
@@ -22,7 +23,6 @@ import org.springframework.hateoas.EntityModel;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import dsd.api.cdmsa.exception.RfcAlternativeBadRequestException;
-import dsd.api.cdmsa.exception.RfcAlternativeNotAllowedException;
 import dsd.api.cdmsa.exception.RfcBadRequestException;
 import dsd.api.cdmsa.exception.RfcDependencyNotFoundException;
 import dsd.api.cdmsa.exception.RfcInvalidStatusException;
@@ -54,7 +54,7 @@ public class RfcService {
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
-    public RfcResponse postCommentToRfc(Long rfcId, User author, CreateCommentRequest request) {
+    public RfcResponse postCommentToRfc(Long rfcId, User author, Long orgId, CreateCommentRequest request) {
 
         RFC rfc = getRfcById(rfcId);
 
@@ -69,9 +69,9 @@ public class RfcService {
 
         Set<User> mentions = null;
 
-        // If the request have mention, we handle it
+        // If the request have mentions, we handle them
         if (request.mentions() != null && !request.mentions().isEmpty()) {
-            mentions = userService.findAllUsersByid(request.mentions()).stream().collect(Collectors.toSet());
+            mentions = userService.findAllUsersByid(request.mentions(), orgId).stream().collect(Collectors.toSet());
             mentions.forEach(comment::addMention);
         }
 
@@ -80,7 +80,7 @@ public class RfcService {
             Comment parent = commentRepository.findById(request.parentId())
                     .orElseThrow(() -> new RfcNotFoundException("Parent comment not found"));
 
-            // Validación extra: el parent debe pertenecer al mismo RFC
+            // Extra validation: parent must belong to same RFC
             if (!parent.getRfc().getId().equals(rfcId)) {
                 throw new RfcBadRequestException("Reply comment must belong to the same RFC");
             }
@@ -92,12 +92,14 @@ public class RfcService {
 
         if (mentions != null) {
             UserMentionCreatedEvent event = new UserMentionCreatedEvent(
-                comment.getId(),
-                author.getId(),
-                mentions.stream().map(User :: getId).toList()
-            );
+                    comment.getId(),
+                    orgId,
+                    rfcId,
+                    comment.getSummary(),
+                    author.getEmail(),
+                    mentions.stream().map(User::getId).toList());
 
-            eventPublisher.publishEvent(event);        
+            eventPublisher.publishEvent(event);
         }
 
         return toDetailedResponse(getRfcById(rfcId));
@@ -144,7 +146,7 @@ public class RfcService {
         // Persist and map
         RFC saved = rfcRepository.save(rfc);
 
-        asignReviewersToRfc(new ReviewersRequest(List.of(userId), null), saved.getId());
+        asignReviewersToRfc(new ReviewersRequest(List.of(userId), null), saved.getId(), orgId);
 
         return toResponse(saved);
     }
@@ -296,31 +298,13 @@ public class RfcService {
     @Transactional
     public AlternativeResponse addAlternative(Long rfcId, Long userId, CreateAlternativeRequest request) {
 
-        // Validate basic payload
-        if (request == null) {
-            throw new RfcAlternativeBadRequestException("Request body cannot be null");
-        }
-        if (request.title() == null || request.title().isBlank()) {
-            throw new RfcAlternativeBadRequestException("Title is required");
-        }
-        if (request.description() == null || request.description().isBlank()) {
-            throw new RfcAlternativeBadRequestException("Description is required");
-        }
-
         // Load RFC
-        RFC rfc = rfcRepository.findById(rfcId)
-                .orElseThrow(() -> new RfcNotFoundException("RFC not found with id " + rfcId));
+        RFC rfc = getRfcById(rfcId);
 
         // Check status: only UNDER_REVIEW allows new alternatives
         if (rfc.getStatus() != RFC.Status.UNDER_REVIEW) {
             throw new RfcInvalidStatusException(
                     "Alternatives can only be created for RFCs in UNDER_REVIEW status");
-        }
-
-        // Check authorization: only RFC author can create alternatives
-        if (!rfc.getUser().getId().equals(userId)) {
-            throw new RfcAlternativeNotAllowedException(
-                    "Only the author of the RFC is allowed to create alternatives");
         }
 
         // Build and persist alternative
@@ -338,6 +322,14 @@ public class RfcService {
         // Update RFC updated timestamp to reflect new alternative
         rfc.setUpdatedAt(java.time.Instant.now());
         rfcRepository.save(rfc);
+
+        List<Long> subscribers = rfc.getObservers().stream()
+                .map(observer -> observer.getUser().getId())
+                .toList();
+
+        RfcUpdatedEvent event = new RfcUpdatedEvent(rfc.getOrg().getId(), rfcId, rfc.getTitle(), subscribers);
+
+        eventPublisher.publishEvent(event);
 
         return AlternativeResponse.fromEntity(saved);
     }
@@ -378,15 +370,10 @@ public class RfcService {
 
     @Transactional
     public RfcResponse closeRfc(Long rfcId, Long userId, CloseRfcRequest request) {
-        RFC rfc = rfcRepository.findById(rfcId)
-                .orElseThrow(() -> new RfcNotFoundException("RFC not found with id " + rfcId));
+        RFC rfc = getRfcById(rfcId);
 
         if (rfc.getStatus() != RFC.Status.UNDER_REVIEW) {
             throw new RfcInvalidStatusException("RFC is not under review");
-        }
-
-        if (rfc.getUser().getId() != userId) {
-            throw new RfcAlternativeNotAllowedException("Only the author can close this RFC");
         }
 
         // Case 1: closed with alternative (US-22)
@@ -415,6 +402,15 @@ public class RfcService {
         }
 
         RFC saved = rfcRepository.save(rfc);
+
+         List<Long> subscribers = rfc.getObservers().stream()
+                .map(observer -> observer.getUser().getId())
+                .toList();
+
+        RfcUpdatedEvent event = new RfcUpdatedEvent(rfc.getOrg().getId(), rfcId, rfc.getTitle(), subscribers);
+
+        eventPublisher.publishEvent(event);
+
         return toResponse(saved);
     }
 
@@ -461,14 +457,14 @@ public class RfcService {
     }
 
     @Transactional
-    public void asignReviewersToRfc(ReviewersRequest reviewers, Long rfcId) {
+    public void asignReviewersToRfc(ReviewersRequest reviewers, Long rfcId, Long orgId) {
 
         List<Long> userIds = reviewers.userIds();
         List<Long> contetxIds = reviewers.contextIds();
         RFC rfc = getRfcById(rfcId);
 
         if (userIds != null && !userIds.isEmpty()) {
-            List<User> users = userService.findAllUsersByid(userIds);
+            List<User> users = userService.findAllUsersByid(userIds, orgId);
 
             List<UserReviewer> userReviewers = users.stream()
                     .map(user -> {
