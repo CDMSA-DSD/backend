@@ -71,9 +71,12 @@ class RfcServiceTest {
         Long templateId = 5L;
 
         CreateRfcRequest request = new CreateRfcRequest(
-                "  My RFC  ",
-                "Desc",
-                templateId);
+            "  My RFC  ",
+            "Desc",
+            templateId,
+            List.of(2L, 3L),
+            List.of(4L)
+        );
 
         User author = new User();
         author.setId(userId);
@@ -118,7 +121,10 @@ class RfcServiceTest {
         CreateRfcRequest request = new CreateRfcRequest(
                 "  ",
                 "Desc",
-                1L);
+                1L,
+                null,
+                null
+        );
 
         assertThrows(RfcBadRequestException.class,
                 () -> rfcService.createRfc(1L, 10L, request));

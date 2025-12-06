@@ -126,8 +126,28 @@ public class RfcService {
         // Persist and map
         RFC saved = rfcRepository.save(rfc);
 
-        asignReviewersToRfc(new ReviewersRequest(List.of(userId),null), saved.getId());
+        // Reviewer assignment logic
+        // If request supports reviewer assignment, extract user/context IDs
+        // Otherwise, fallback to author only
+        List<Long> userReviewerIds = new java.util.ArrayList<>();
+        List<Long> contextReviewerIds = new java.util.ArrayList<>();
 
+        // Check if request is an instance of extended reviewer request
+        if (request.userReviewerIds() != null || !request.userReviewerIds().isEmpty()) {
+            userReviewerIds.addAll(request.userReviewerIds());
+        }
+
+        if (request.contextReviewerIds() != null || !request.contextReviewerIds().isEmpty()) {
+            contextReviewerIds.addAll(request.contextReviewerIds());
+        }
+
+        // Always add author as reviewer
+        if (!userReviewerIds.contains(userId)) {
+            userReviewerIds.add(userId);
+        }
+
+        asignReviewersToRfc(new ReviewersRequest(userReviewerIds, contextReviewerIds), saved.getId());
+        
         return toResponse(saved);
     }
 
@@ -181,21 +201,22 @@ public class RfcService {
                 .toList();
 
         return new RfcSpecificResponse(
-                rfc.getId(),
-                rfc.getTitle(),
-                rfc.getDescription(),
-                rfc.getUser() != null ? rfc.getUser().getId() : null,
-                rfc.getUser() != null ? rfc.getUser().getFirstname() : null, // Before getName
-                rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
-                rfc.getOrg() != null ? rfc.getOrg().getId() : null,
-                rfc.getStatus(),
-                rfc.getCreatedAt(),
-                rfc.getUpdatedAt(),
-                isAuthor,
-                userReviewers,
-                contextReviewrs,
-                detailedRfc.alternatives(),
-                detailedRfc.comments());
+            rfc.getId(),
+            rfc.getTitle(),
+            rfc.getDescription(),
+            rfc.getUser() != null ? rfc.getUser().getId() : null,
+            rfc.getUser() != null ? rfc.getUser().getFirstname() : null,
+            rfc.getUser() != null ? rfc.getUser().getLastname() : null,
+            rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
+            rfc.getOrg() != null ? rfc.getOrg().getId() : null,
+            rfc.getStatus(),
+            rfc.getCreatedAt(),
+            rfc.getUpdatedAt(),
+            isAuthor,
+            userReviewers,
+            contextReviewrs,
+            detailedRfc.alternatives(),
+            detailedRfc.comments());
     }
 
     private RfcResponse toResponse(RFC rfc) {
@@ -206,7 +227,7 @@ public class RfcService {
                 rfc.getTitle(),
                 rfc.getDescription(),
                 rfc.getUser() != null ? rfc.getUser().getId() : null,
-                rfc.getUser() != null ? rfc.getUser().getFirstname() : null, // Before getName
+                rfc.getUser() != null ? (rfc.getUser().getFirstname() + " " + rfc.getUser().getLastname()) : null,
                 rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
                 rfc.getOrg() != null ? rfc.getOrg().getId() : null,
                 rfc.getStatus(),
@@ -245,19 +266,19 @@ public class RfcService {
                 .toList();
 
         return new RfcResponse(
-                rfc.getId(),
-                rfc.getTitle(),
-                rfc.getDescription(),
-                rfc.getUser() != null ? rfc.getUser().getId() : null,
-                rfc.getUser() != null ? rfc.getUser().getFirstname() : null, // Before getName
-                rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
-                rfc.getOrg() != null ? rfc.getOrg().getId() : null,
-                rfc.getStatus(),
-                rfc.getCreatedAt(),
-                rfc.getUpdatedAt(),
-                (long) comments.size(),
-                alts,
-                threaded);
+            rfc.getId(),
+            rfc.getTitle(),
+            rfc.getDescription(),
+            rfc.getUser() != null ? rfc.getUser().getId() : null,
+            rfc.getUser() != null ? (rfc.getUser().getFirstname() + " " + rfc.getUser().getLastname()) : null,
+            rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
+            rfc.getOrg() != null ? rfc.getOrg().getId() : null,
+            rfc.getStatus(),
+            rfc.getCreatedAt(),
+            rfc.getUpdatedAt(),
+            (long) comments.size(),
+            alts,
+            threaded);
     }
 
     private CommentResponse buildThreaded(Comment comment, Map<Long, List<Comment>> childrenMap) {
@@ -441,11 +462,27 @@ public class RfcService {
 
     @Transactional
     public void asignReviewersToRfc(ReviewersRequest reviewers, Long rfcId) {
-
         List<Long> userIds = reviewers.userIds();
-        List<Long> contetxIds = reviewers.contextIds();
+        List<Long> contextIds = reviewers.contextIds();
         RFC rfc = getRfcById(rfcId);
 
+        // Remove user reviewers not in the new list
+        if (userIds != null) {
+            var toRemove = userReviewerRepository.findAllByRfc(rfc).stream()
+                .filter(ur -> !userIds.contains(ur.getUser().getId()))
+                .toList();
+            toRemove.forEach(userReviewerRepository::delete);
+        }
+
+        // Remove context reviewers not in the new list
+        if (contextIds != null) {
+            var toRemove = contextReviewerRepository.findAllByRfc(rfc).stream()
+                .filter(cr -> !contextIds.contains(cr.getContext().getId()))
+                .toList();
+            toRemove.forEach(contextReviewerRepository::delete);
+        }
+
+        // Add new user reviewers
         if (userIds != null && !userIds.isEmpty()) {
             List<User> users = userService.findAllUsersByid(userIds);
 
@@ -459,10 +496,10 @@ public class RfcService {
                     .toList();
 
             userReviewerRepository.saveAll(userReviewers);
-        }
+                }
 
-        if (contetxIds != null && !contetxIds.isEmpty()) {
-            List<Context> contexts = contextService.findAllContextByid(contetxIds);
+        if (contextIds != null && !contextIds.isEmpty()) {
+            List<Context> contexts = contextService.findAllContextByid(contextIds);
 
             List<ContextReviewer> contextReviewers = contexts.stream()
                     .map(context -> {
@@ -475,7 +512,6 @@ public class RfcService {
 
             contextReviewerRepository.saveAll(contextReviewers);
         }
-
     }
 
     public boolean isReviewer(User user, Long rfcId) {
