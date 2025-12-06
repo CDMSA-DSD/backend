@@ -6,10 +6,10 @@ import dsd.api.cdmsa.model.*;
 import dsd.api.cdmsa.repository.*;
 import dsd.api.cdmsa.service.RfcService;
 
-import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -19,7 +19,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.mock.web.MockMultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -38,10 +42,13 @@ class RfcServiceTest {
     private RfcRepository rfcRepository;
 
     @Mock
-    private AdrRepository adrRepository;
+    private AlternativeAttachmentRepository alternativeAttachmentRepository;
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private RfcAttachmentRepository rfcAttachmentRepository;
 
     @Mock
     private TemplateRepository templateRepository;
@@ -65,25 +72,23 @@ class RfcServiceTest {
     // createRfc
     // ------------------------------------------------------------
 
+
     @Test
-    void createRfc_shouldCreateRfc_whenValidRequestAndDependenciesExist() {
+    void createRfc_shouldCreateRfc_whenValidRequestAndDependenciesExist() throws IOException {
         Long userId = 1L;
         Long orgId = 10L;
         Long templateId = 5L;
 
+        // DTO Update: (title, description, templateId, xml) - NO addition
         CreateRfcRequest request = new CreateRfcRequest(
                 "  My RFC  ",
                 "Desc",
-                templateId);
+                templateId,
+                null);
 
-        User author = new User();
-        author.setId(userId);
-
-        Organization org = new Organization();
-        org.setId(orgId);
-
-        Template template = new Template();
-        template.setId(templateId);
+        User author = new User(); author.setId(userId);
+        Organization org = new Organization(); org.setId(orgId);
+        Template template = new Template(); template.setId(templateId);
 
         RFC rfc = new RFC();
         rfc.setId(100L);
@@ -92,17 +97,24 @@ class RfcServiceTest {
         rfc.setUser(author);
         rfc.setTemplate(template);
         rfc.setOrg(org);
+        rfc.setStatus(RFC.Status.UNDER_REVIEW);
 
+        // Mocks
         when(userRepository.findById(userId)).thenReturn(Optional.of(author));
         when(templateRepository.findById(templateId)).thenReturn(Optional.of(template));
         when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
         when(rfcRepository.save(any(RFC.class))).thenReturn(rfc);
-        when(commentRepository.findByRfcId(rfc.getId())).thenReturn(Collections.emptyList());
 
-        RfcResponse response = rfcService.createRfc(userId, orgId, request);
+        // Mocks per la costruzione della risposta (allegati e commenti)
+        when(commentRepository.findByRfcId(rfc.getId())).thenReturn(Collections.emptyList());
+        when(rfcAttachmentRepository.findByRfcId(rfc.getId())).thenReturn(Collections.emptyList());
+
+        // Esecuzione (passiamo null ai files per simulare assenza allegati)
+        RfcResponse response = rfcService.createRfc(userId, orgId, request, null);
 
         assertNotNull(response);
-        // capturamos el RFC que se guardó para asegurar que el título está trimmed
+
+        // Verifica trimming titolo
         ArgumentCaptor<RFC> captor = ArgumentCaptor.forClass(RFC.class);
         verify(rfcRepository).save(captor.capture());
         assertEquals("My RFC", captor.getValue().getTitle());
@@ -111,7 +123,7 @@ class RfcServiceTest {
     @Test
     void createRfc_shouldThrowBadRequest_whenRequestIsNull() {
         assertThrows(RfcBadRequestException.class,
-                () -> rfcService.createRfc(1L, 10L, null));
+                () -> rfcService.createRfc(1L, 10L, null, null));
     }
 
     @Test
@@ -119,11 +131,13 @@ class RfcServiceTest {
         CreateRfcRequest request = new CreateRfcRequest(
                 "  ",
                 "Desc",
-                1L);
+                1L,
+                null);
 
         assertThrows(RfcBadRequestException.class,
-                () -> rfcService.createRfc(1L, 10L, request));
+                () -> rfcService.createRfc(1L, 10L, request, null));
     }
+
 
     // ------------------------------------------------------------
     // getRfcById / listRfcs / listRfcsByOrg
@@ -240,7 +254,7 @@ class RfcServiceTest {
     @Test
     void addAlternative_shouldThrowBadRequest_whenRequestNull() {
         assertThrows(RfcAlternativeBadRequestException.class,
-                () -> rfcService.addAlternative(1L, 1L, null));
+                () -> rfcService.addAlternative(1L, 1L, null, null));
     }
 
     @Test
@@ -254,10 +268,10 @@ class RfcServiceTest {
 
         when(rfcRepository.findById(rfcId)).thenReturn(Optional.of(rfc));
 
-        CreateAlternativeRequest request = new CreateAlternativeRequest("Alt", "Desc", "Pros", "Cons");
+        CreateAlternativeRequest request = new CreateAlternativeRequest("Alt", "Desc", "Pros", "Cons", null);
 
         assertThrows(RfcInvalidStatusException.class,
-                () -> rfcService.addAlternative(rfcId, userId, request));
+                () -> rfcService.addAlternative(rfcId, userId, request, null));
     }
 
     @Test
@@ -275,40 +289,62 @@ class RfcServiceTest {
 
         when(rfcRepository.findById(rfcId)).thenReturn(Optional.of(rfc));
 
-        CreateAlternativeRequest request = new CreateAlternativeRequest("Alt", "Desc", "Pros", "Cons");
+        CreateAlternativeRequest request = new CreateAlternativeRequest("Alt", "Desc", "Pros", "Cons", null);
 
         assertThrows(RfcAlternativeNotAllowedException.class,
-                () -> rfcService.addAlternative(rfcId, userId, request));
+                () -> rfcService.addAlternative(rfcId, userId, request, null));
     }
 
     @Test
-    void addAlternative_shouldCreateAlternative_whenAuthorAndUnderReview() {
+    void addAlternative_shouldCreateAlternative_whenAuthorAndUnderReview() throws IOException {
         Long rfcId = 1L;
         Long userId = 1L;
+        Long orgId = 10L;
 
-        User author = new User();
-        author.setId(userId);
+        User author = new User(); author.setId(userId);
+        Organization org = new Organization(); org.setId(orgId);
 
         RFC rfc = new RFC();
         rfc.setId(rfcId);
         rfc.setStatus(RFC.Status.UNDER_REVIEW);
         rfc.setUser(author);
+        rfc.setOrg(org);
 
-        CreateAlternativeRequest request = new CreateAlternativeRequest("Alt", "Desc", "Pros", "Cons");
+        CreateAlternativeRequest request = new CreateAlternativeRequest("Alt", "Desc", "Pros", "Cons", null);
 
+        // 1. Mock find RFC
         when(rfcRepository.findById(rfcId)).thenReturn(Optional.of(rfc));
+
+        // 2. Mock save Alternative
         when(alternativeRepository.save(any(Alternative.class)))
                 .thenAnswer(invocation -> {
                     Alternative a = invocation.getArgument(0);
-                    a.setId(10L);
+                    a.setId(10L); // Simuliamo ID generato
                     return a;
                 });
 
-        AlternativeResponse response = rfcService.addAlternative(rfcId, userId, request);
+        // 3. Mock retrieve Alternative per costruire la Response (il service chiama getAlternativeByIdForOrg alla fine)
+        when(alternativeRepository.findById(10L)).thenAnswer(inv -> {
+            Alternative a = new Alternative();
+            a.setId(10L);
+            a.setRfc(rfc);
+            a.setAuthor(author);
+            a.setTitle("Alt");
+            a.setDescription("Desc");
+            return Optional.of(a);
+        });
+
+        // 4. Mock dependencies per Response
+        when(alternativeAttachmentRepository.findByAlternativeId(10L)).thenReturn(Collections.emptyList());
+        when(voteRepository.countByAlternativeAndOutcome(any(), eq(true))).thenReturn(0);
+        when(voteRepository.countByAlternativeAndOutcome(any(), eq(false))).thenReturn(0);
+
+        AlternativeSpecificResponse response = rfcService.addAlternative(rfcId, userId, request, null);
 
         assertNotNull(response);
         verify(alternativeRepository).save(any(Alternative.class));
     }
+
 
     // ------------------------------------------------------------
     // closeRfc
@@ -411,5 +447,188 @@ class RfcServiceTest {
         assertEquals(0, response.yesCount());
         assertEquals(0, response.noCount());
         verify(voteRepository).delete(existing);
+    }
+
+    @Test
+    void updateOrCreateDiagram_shouldUpdateXml_whenAuthor() {
+        Long rfcId = 100L;
+        Long userId = 1L;
+        String newXml = "<xml>Diagram</xml>";
+
+        User author = new User(); author.setId(userId);
+        Organization org = new Organization(); org.setId(5L);
+        RFC rfc = new RFC();
+        rfc.setId(rfcId);
+        rfc.setUser(author);
+        rfc.setOrg(org);
+        rfc.setStatus(RFC.Status.UNDER_REVIEW);
+
+        when(rfcRepository.findById(rfcId)).thenReturn(Optional.of(rfc));
+        // Mock per la risposta
+        when(rfcRepository.findByIdAndOrgId(rfcId, 5L)).thenReturn(Optional.of(rfc));
+        when(rfcAttachmentRepository.findByRfcId(rfcId)).thenReturn(Collections.emptyList());
+        when(commentRepository.findByRfcId(rfcId)).thenReturn(Collections.emptyList());
+        when(alternativeRepository.findByRfcId(rfcId)).thenReturn(Collections.emptyList());
+
+        RfcSpecificResponse response = rfcService.updateOrCreateDiagram(rfcId, userId, newXml);
+
+        assertEquals(newXml, rfc.getXml());
+        verify(rfcRepository).save(rfc);
+    }
+
+    @Test
+    void updateOrCreateAlternativeDiagram_shouldUpdateXml() {
+        Long altId = 200L;
+        Long userId = 1L;
+        String newXml = "<xml>AltDiagram</xml>";
+
+        User author = new User(); author.setId(userId);
+        Organization org = new Organization(); org.setId(5L);
+        RFC rfc = new RFC(); rfc.setOrg(org); rfc.setStatus(RFC.Status.UNDER_REVIEW);
+
+        Alternative alt = new Alternative();
+        alt.setId(altId);
+        alt.setAuthor(author);
+        alt.setRfc(rfc);
+
+        when(alternativeRepository.findById(altId)).thenReturn(Optional.of(alt));
+        when(alternativeAttachmentRepository.findByAlternativeId(altId)).thenReturn(Collections.emptyList());
+
+        AlternativeSpecificResponse response = rfcService.updateOrCreateAlternativeDiagram(altId, userId, newXml);
+
+        assertEquals(newXml, alt.getXml());
+        verify(alternativeRepository).save(alt);
+    }
+
+    // =========================================================================
+    // 4. ATTACHMENT UPLOAD/DOWNLOAD (New)
+    // =========================================================================
+
+    @Test
+    void uploadMultipleAttachments_shouldSaveFiles_RFC() throws IOException {
+        Long rfcId = 100L;
+        Long userId = 1L;
+        RFC rfc = new RFC(); rfc.setId(rfcId);
+
+        when(rfcRepository.findById(rfcId)).thenReturn(Optional.of(rfc));
+
+        MockMultipartFile file = new MockMultipartFile("files", "doc.pdf", "application/pdf", "data".getBytes());
+
+        List<RfcAttachment> result = rfcService.uploadMultipleAttachments(rfcId, userId, List.of(file));
+
+        assertEquals(1, result.size());
+        verify(rfcAttachmentRepository).save(any(RfcAttachment.class));
+    }
+
+    @Test
+    void downloadRfcAttachment_shouldReturnResource_whenAuthorized(@TempDir Path tempDir) throws IOException {
+        // Creiamo un file temporaneo reale per evitare errori di 'file not found'
+        Path tempFile = Files.createFile(tempDir.resolve("test.txt"));
+        Files.writeString(tempFile, "Content");
+
+        Long attId = 10L;
+        Long userOrgId = 50L;
+
+        Organization org = new Organization(); org.setId(userOrgId);
+        RFC rfc = new RFC(); rfc.setOrg(org);
+
+        RfcAttachment attachment = new RfcAttachment();
+        attachment.setId(attId);
+        attachment.setRfc(rfc);
+        attachment.setFileName("test.txt");
+        attachment.setFilePath(tempFile.toAbsolutePath().toString());
+
+        when(rfcAttachmentRepository.findById(attId)).thenReturn(Optional.of(attachment));
+
+        RfcService.FileDownloadDTO result = rfcService.downloadRfcAttachment(attId, userOrgId);
+
+        assertNotNull(result.resource());
+        assertTrue(result.resource().exists());
+    }
+
+    @Test
+    void downloadRfcAttachment_shouldThrowForbidden_whenWrongOrg() {
+        Long attId = 10L;
+        Long userOrgId = 99L; // Wrong ID
+
+        Organization org = new Organization(); org.setId(50L);
+        RFC rfc = new RFC(); rfc.setOrg(org);
+        RfcAttachment attachment = new RfcAttachment();
+        attachment.setId(attId);
+        attachment.setRfc(rfc);
+
+        when(rfcAttachmentRepository.findById(attId)).thenReturn(Optional.of(attachment));
+
+        assertThrows(RfcAlternativeNotAllowedException.class,
+                () -> rfcService.downloadRfcAttachment(attId, userOrgId));
+    }
+
+    // =========================================================================
+    // 5. UPDATE TEXT FIELDS (Including 'Addition')
+    // =========================================================================
+
+    @Test
+    void updateRfcText_shouldUpdateAddition_whenProvided() {
+        Long rfcId = 100L;
+        Long userId = 1L;
+        Long orgId = 10L;
+
+        User author = new User(); author.setId(userId);
+        RFC rfc = new RFC();
+        rfc.setId(rfcId);
+        rfc.setUser(author);
+        rfc.setStatus(RFC.Status.UNDER_REVIEW);
+        Organization org = new Organization(); org.setId(orgId);
+        rfc.setOrg(org);
+
+        // UpdateRequest: (title, description, ADDITION)
+        UpdateRfcRequest request = new UpdateRfcRequest("New Title", "New Desc", "My Addition Note");
+
+        when(rfcRepository.findByIdAndOrgId(rfcId, orgId)).thenReturn(Optional.of(rfc));
+        // Mock getRfcByIdForOrg return
+        when(rfcAttachmentRepository.findByRfcId(rfcId)).thenReturn(Collections.emptyList());
+        when(commentRepository.findByRfcId(rfcId)).thenReturn(Collections.emptyList());
+        when(alternativeRepository.findByRfcId(rfcId)).thenReturn(Collections.emptyList());
+
+        RfcSpecificResponse response = rfcService.updateRfcText(rfcId, userId, orgId, request);
+
+        // Verifiche
+        ArgumentCaptor<RFC> captor = ArgumentCaptor.forClass(RFC.class);
+        verify(rfcRepository).save(captor.capture());
+
+        RFC saved = captor.getValue();
+        assertEquals("New Title", saved.getTitle());
+        assertEquals("My Addition Note", saved.getAddition()); // Verifica campo addition
+    }
+
+    @Test
+    void updateAlternative_shouldUpdateAddition_whenProvided() {
+        Long altId = 200L;
+        Long userId = 1L;
+
+        User author = new User(); author.setId(userId);
+        Organization org = new Organization(); org.setId(5L);
+        RFC rfc = new RFC();
+        rfc.setOrg(org);
+        rfc.setStatus(RFC.Status.UNDER_REVIEW);
+
+        Alternative alt = new Alternative();
+        alt.setId(altId);
+        alt.setAuthor(author);
+        alt.setRfc(rfc);
+
+        // UpdateRequest: (title, description, pros, cons, ADDITION)
+        UpdateAlternativeRequest request = new UpdateAlternativeRequest(
+                "T", "D", "P", "C", "Alt Addition");
+
+        when(alternativeRepository.findById(altId)).thenReturn(Optional.of(alt));
+        when(alternativeAttachmentRepository.findByAlternativeId(altId)).thenReturn(Collections.emptyList());
+
+        AlternativeSpecificResponse response = rfcService.updateAlternative(altId, userId, request);
+
+        ArgumentCaptor<Alternative> captor = ArgumentCaptor.forClass(Alternative.class);
+        verify(alternativeRepository).save(captor.capture());
+
+        assertEquals("Alt Addition", captor.getValue().getAddition());
     }
 }
