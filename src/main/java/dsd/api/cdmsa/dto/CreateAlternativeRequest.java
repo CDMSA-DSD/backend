@@ -4,5 +4,6 @@ public record CreateAlternativeRequest(
                 String title,
                 String description,
                 String pros,
-                String cons) {
+                String cons,
+                String xml) {
 }

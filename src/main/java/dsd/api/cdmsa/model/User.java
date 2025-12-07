@@ -49,6 +49,9 @@ public class User extends RepresentationModel<User> {
     @Column(nullable = false)
     private Instant joinedAt;
 
+    @Column(name = "job_title", nullable = false)
+    private String jobTitle = "Developer";  // Developer as default
+
     @OneToMany(mappedBy = "user")
     private List<RFC> rfcs = new ArrayList<>();
 

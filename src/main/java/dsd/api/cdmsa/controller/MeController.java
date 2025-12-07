@@ -1,5 +1,8 @@
 package dsd.api.cdmsa.controller;
 
+import dsd.api.cdmsa.dto.UpdateUserProfileRequest;
+import dsd.api.cdmsa.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,6 +25,7 @@ import lombok.AllArgsConstructor;
 public class MeController {
 
     private final OrgService orgService;
+    private final UserService userService;
 
     private UserModelAssembler userModelAssembler;
     private OrgModelAssembler orgModelAssembler;
@@ -42,6 +46,18 @@ public class MeController {
         Organization org = orgService.getOrgDetailsAlt(principal.getOrgId());
 
         return ResponseEntity.ok(orgModelAssembler.toModel(org));
+    }
+
+    // Update my profile
+    @PutMapping()
+    public ResponseEntity<EntityModel<UserResponse>> updateMyProfile(
+            @RequestBody @Valid UpdateUserProfileRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        Long userId = principal.getUser().getId();
+        User response = userService.updateUserProfile(userId, request);
+
+        return ResponseEntity.ok(userModelAssembler.toModel(response));
     }
 
 }
