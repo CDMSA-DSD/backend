@@ -3,6 +3,7 @@ package dsd.api.cdmsa.service;
 import java.security.InvalidParameterException;
 import java.util.List;
 
+import dsd.api.cdmsa.dto.*;
 import org.springframework.data.domain.*;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -10,11 +11,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import dsd.api.cdmsa.dto.ContextByAdminResponse;
-import dsd.api.cdmsa.dto.LoginRequest;
-import dsd.api.cdmsa.dto.SignInRequest;
-import dsd.api.cdmsa.dto.LoginResponse;
-import dsd.api.cdmsa.dto.UserResponse;
 import dsd.api.cdmsa.exception.UserExistsException;
 import dsd.api.cdmsa.exception.UserNotFoundException;
 import dsd.api.cdmsa.model.OrganizationInvitation;
@@ -24,6 +20,7 @@ import dsd.api.cdmsa.model.UserPrincipal;
 import dsd.api.cdmsa.repository.UserRepository;
 
 import lombok.AllArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @AllArgsConstructor
@@ -123,6 +120,25 @@ public class UserService {
 
     public void deleteUser(Long id) {
         repository.deleteById(id);
+    }
+
+    @Transactional
+    public User updateUserProfile(Long userId, UpdateUserProfileRequest request) {
+        User user = repository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        if (request.firstname() != null && !request.firstname().isBlank()) {
+            user.setFirstname(request.firstname().trim());
+        }
+        if (request.lastname() != null && !request.lastname().isBlank()) {
+            user.setLastname(request.lastname().trim());
+        }
+
+        if (request.jobTitle() != null && !request.jobTitle().isBlank()) {
+            user.setJobTitle(request.jobTitle().trim());
+        }
+
+        return repository.save(user);
     }
 
 }

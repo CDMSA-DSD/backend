@@ -10,5 +10,6 @@ public record UserResponse(
     String firstname,
     String lastName,
     String email,
-    Instant joinedAt
+    Instant joinedAt,
+    String jobTitle
     ) {}

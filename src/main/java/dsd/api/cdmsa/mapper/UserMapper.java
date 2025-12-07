@@ -12,6 +12,7 @@ public class UserMapper {
                 user.getFirstname(),
                 user.getLastname(),
                 user.getEmail(),
-                user.getJoinedAt());
+                user.getJoinedAt(),
+                user.getJobTitle());
     }
 }

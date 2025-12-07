@@ -73,6 +73,7 @@ public class OrgService {
             admin.setLastname(user.lastname());
             admin.setEmail(user.email());
             admin.setPassword(user.password()); // Hashed later in createUser
+            admin.setJobTitle("Admin");
 
             admin.setOrg(newOrg); // Admin belongs to org
 
