@@ -2,6 +2,8 @@ package dsd.api.cdmsa.dto;
 
 import dsd.api.cdmsa.model.ADR;
 
+import java.util.List;
+
 public record AdrSpecificResponse(
         Long id,
         String title,
@@ -13,5 +15,7 @@ public record AdrSpecificResponse(
         boolean author,
         java.time.Instant createdAt,
         java.time.Instant updatedAt,
-        String gitHubUrl) {
+        String gitHubUrl,
+        List<PartecipatingUser> reviewers,
+        List<PartecipatingUser> observers) {
 }
