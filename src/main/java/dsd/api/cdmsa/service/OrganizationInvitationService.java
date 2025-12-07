@@ -83,7 +83,7 @@ public class OrganizationInvitationService {
     }
 
     private boolean isInvitationExpired(OrganizationInvitation invitation) {
-        return invitation.getExpiresAt().isBefore(Instant.now());
+        return invitation.getExpiresAt().isBefore(Instant.now()) || invitation.getState() != OrganizationInvitation.State.ACTIVE;
     }
 
     public Page<OrganizationInvitation> findAllInvitations(Long orgId, int page, int size) {
