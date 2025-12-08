@@ -116,7 +116,7 @@ class OrganizationInvitationServiceTest {
 
         when(invitationRepository.findByToken("abcd")).thenReturn(Optional.of(inv));
 
-        OrganizationInvitation result = invitationService.getInvitationByToken("abcd");
+        OrganizationInvitation result = invitationService.getInvitationByToken("abcde");
 
         assertNotNull(result);
         verify(invitationRepository).findByToken("abcd");

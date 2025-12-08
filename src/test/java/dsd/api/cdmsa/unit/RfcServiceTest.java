@@ -1,10 +1,12 @@
 package dsd.api.cdmsa.unit;
 
+import dsd.api.cdmsa.assembler.ContextSummaryModelAssembler;
 import dsd.api.cdmsa.dto.*;
 import dsd.api.cdmsa.exception.*;
 import dsd.api.cdmsa.model.*;
 import dsd.api.cdmsa.repository.*;
 import dsd.api.cdmsa.service.RfcService;
+import dsd.api.cdmsa.service.UserService;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +32,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
@@ -65,9 +68,24 @@ class RfcServiceTest {
     @Mock
     private VoteRepository voteRepository;
 
+    @Mock
+    private UserReviewerRepository userReviewerRepository;
+
+    @Mock
+    private UserObserverRepository userObserverRepository;
+    
+    @Mock
+    private UserService userService;
+    
+    @Mock
+    private ContextReviewerRepository contextReviewerRepository;
+    
     @InjectMocks
     private RfcService rfcService;
 
+    @Mock
+    private ContextSummaryModelAssembler contextSummaryModelAssembler;
+    
     // ------------------------------------------------------------
     // createRfc
     // ------------------------------------------------------------
@@ -101,10 +119,12 @@ class RfcServiceTest {
 
         // Mocks
         when(userRepository.findById(userId)).thenReturn(Optional.of(author));
+        when(userService.findAllUsersByid(List.of(userId),orgId)).thenReturn(List.of(author));
         when(templateRepository.findById(templateId)).thenReturn(Optional.of(template));
         when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
         when(rfcRepository.save(any(RFC.class))).thenReturn(rfc);
-
+        when(rfcRepository.findById(rfc.getId())).thenReturn(Optional.of(rfc));
+        
         // Mocks per la costruzione della risposta (allegati e commenti)
         when(commentRepository.findByRfcId(rfc.getId())).thenReturn(Collections.emptyList());
         when(rfcAttachmentRepository.findByRfcId(rfc.getId())).thenReturn(Collections.emptyList());
@@ -150,8 +170,8 @@ class RfcServiceTest {
         rfc.setTitle("RFC title");
 
         when(rfcRepository.findById(100L)).thenReturn(Optional.of(rfc));
-        when(alternativeRepository.findByRfcId(100L)).thenReturn(Collections.emptyList());
-        when(commentRepository.findByRfcId(100L)).thenReturn(Collections.emptyList());
+     // when(alternativeRepository.findByRfcId(100L)).thenReturn(Collections.emptyList()); // Unecessary Stubbing
+    //  when(commentRepository.findByRfcId(100L)).thenReturn(Collections.emptyList());
 
         RFC response = rfcService.getRfcById(100L);
 
@@ -210,6 +230,14 @@ class RfcServiceTest {
     void postCommentToRfc_shouldThrowBadRequest_whenRfcClosed() {
         Long rfcId = 100L;
         Long userId = 1L;
+        Long orgId = 1L;
+
+        Organization org = new Organization();
+        org.setId(orgId);
+
+        User user = new User();
+        user.setId(userId);
+        user.setOrg(org);
 
         RFC rfc = new RFC();
         rfc.setId(rfcId);
@@ -219,14 +247,22 @@ class RfcServiceTest {
 
         CreateCommentRequest request = new CreateCommentRequest("comment", null, null);
 
-    //    assertThrows(RfcBadRequestException.class,
-    //            () -> rfcService.postCommentToRfc(rfcId, userId, request));
+        assertThrows(RfcBadRequestException.class,
+              () -> rfcService.postCommentToRfc(rfcId, user, orgId, request));
     }
 
     @Test
     void postCommentToRfc_shouldCreateComment_whenUnderReview() {
         Long rfcId = 100L;
         Long userId = 1L;
+        Long orgId = 1L;
+
+        Organization org = new Organization();
+        org.setId(orgId);
+
+        User user = new User();
+        user.setId(userId);
+        user.setOrg(org);
 
         RFC rfc = new RFC();
         rfc.setId(rfcId);
@@ -238,13 +274,13 @@ class RfcServiceTest {
         CreateCommentRequest request = new CreateCommentRequest("Nice RFC", null, null);
 
         when(rfcRepository.findById(rfcId)).thenReturn(Optional.of(rfc));
-        when(userRepository.findById(userId)).thenReturn(Optional.of(author));
+        // when(userRepository.findById(userId)).thenReturn(Optional.of(author));
         when(commentRepository.findByRfcId(rfcId)).thenReturn(Collections.emptyList());
         when(alternativeRepository.findByRfcId(rfcId)).thenReturn(Collections.emptyList());
 
-       // RfcResponse response = rfcService.postCommentToRfc(rfcId, userId, request);
-//
-  //      assertNotNull(response);
+       RfcResponse response = rfcService.postCommentToRfc(rfcId, user, orgId, request);
+
+        assertNotNull(response);
         verify(commentRepository).save(any(Comment.class));
     }
 
@@ -459,6 +495,10 @@ class RfcServiceTest {
         User author = new User(); author.setId(userId);
         Organization org = new Organization(); org.setId(5L);
         RFC rfc = new RFC();
+        Context context  = new Context();
+        ContextReviewer cr = new ContextReviewer();
+        cr.setContext(context);
+
         rfc.setId(rfcId);
         rfc.setUser(author);
         rfc.setOrg(org);
@@ -470,8 +510,11 @@ class RfcServiceTest {
         when(rfcAttachmentRepository.findByRfcId(rfcId)).thenReturn(Collections.emptyList());
         when(commentRepository.findByRfcId(rfcId)).thenReturn(Collections.emptyList());
         when(alternativeRepository.findByRfcId(rfcId)).thenReturn(Collections.emptyList());
+        when(userObserverRepository.existsById(any(UserRFCId.class))).thenReturn(false);
+        when(contextReviewerRepository.findAllByRfc(rfc)).thenReturn(List.of(cr));
+        when(contextSummaryModelAssembler.toModel(context)).thenReturn(null);
 
-        RfcSpecificResponse response = rfcService.updateOrCreateDiagram(rfcId, userId, newXml);
+        rfcService.updateOrCreateDiagram(rfcId, userId, newXml);
 
         assertEquals(newXml, rfc.getXml());
         verify(rfcRepository).save(rfc);
@@ -591,7 +634,7 @@ class RfcServiceTest {
         when(commentRepository.findByRfcId(rfcId)).thenReturn(Collections.emptyList());
         when(alternativeRepository.findByRfcId(rfcId)).thenReturn(Collections.emptyList());
 
-        RfcSpecificResponse response = rfcService.updateRfcText(rfcId, userId, orgId, request);
+        rfcService.updateRfcText(rfcId, userId, orgId, request);
 
         // Verifiche
         ArgumentCaptor<RFC> captor = ArgumentCaptor.forClass(RFC.class);
