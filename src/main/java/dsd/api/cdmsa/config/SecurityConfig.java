@@ -51,7 +51,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(request -> request
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/auth/login", "/auth/register-org", "/auth/register-invitation").permitAll()
-                        .requestMatchers("/adrs/**", "/contexts/**", "/me/**", "/orgs/**", "/invitations/**", "/rfcs/**",
+                        .requestMatchers("/adrs/**", "/contexts/**", "/me/**", "/orgs/**", "/invitations/**",
+                                "/rfcs/**",
                                 "/users/**")
                         .authenticated()
                         // Any other request requires authentication
@@ -97,7 +98,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         // Allow the frontend dev server explicitly; don't use wildcard with credentials
         configuration.setAllowedOrigins(java.util.Arrays.asList("http://localhost:3000"));
-        configuration.setAllowedMethods(java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(java.util.Arrays.asList("Authorization", "Content-Type", "Accept", "Origin"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
