@@ -12,7 +12,8 @@ public record UserResponse(
         String firstname,
         String lastName,
         String email,
-        Instant joinedAt) {
+        Instant joinedAt,
+        String jobTitle) {
 
     public static UserResponse fromEntity(User user) {
         return new UserResponse(
@@ -20,6 +21,7 @@ public record UserResponse(
                 user.getFirstname(),
                 user.getLastname(),
                 user.getEmail(),
-                user.getJoinedAt());
+                user.getJoinedAt(),
+                user.getJobTitle());
     }
 }

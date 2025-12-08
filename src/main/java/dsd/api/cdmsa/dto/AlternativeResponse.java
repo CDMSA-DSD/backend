@@ -10,6 +10,7 @@ public record AlternativeResponse(
         String cons,
         Long authorId,
         String authorName,
+        String addition,
         java.time.Instant createdAt,
         java.time.Instant updatedAt,
         int yes,
@@ -23,7 +24,8 @@ public record AlternativeResponse(
                 alternative.getPros(),
                 alternative.getCons(),
                 alternative.getAuthor() != null ? alternative.getAuthor().getId() : null,
-                alternative.getAuthor() != null ? alternative.getAuthor().getFirstname() : null,
+                alternative.getAuthor() != null ? alternative.getAuthor().getFirstname() + " " + alternative.getAuthor().getLastname() : null,
+                alternative.getAddition(),
                 alternative.getCreatedAt(),
                 alternative.getUpdatedAt(),
                 0,
@@ -38,7 +40,8 @@ public record AlternativeResponse(
                 alternative.getPros(),
                 alternative.getCons(),
                 alternative.getAuthor() != null ? alternative.getAuthor().getId() : null,
-                alternative.getAuthor() != null ? alternative.getAuthor().getFirstname() : null,
+                alternative.getAuthor() != null ? alternative.getAuthor().getFirstname() + " " + alternative.getAuthor().getLastname() : null,
+                alternative.getAddition(),
                 alternative.getCreatedAt(),
                 alternative.getUpdatedAt(), yes, no);
     }

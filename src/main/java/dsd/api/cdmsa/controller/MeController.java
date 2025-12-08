@@ -2,6 +2,9 @@ package dsd.api.cdmsa.controller;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.web.PagedResourcesAssembler;
+import dsd.api.cdmsa.dto.UpdateUserProfileRequest;
+import dsd.api.cdmsa.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.PagedModel;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +34,7 @@ public class MeController {
 
     private final OrgService orgService;
     private final NotificationService notiService;
+    private final UserService userService;
 
     private UserResponseModelAssembler userResponseModelAssembler;
     private OrgModelAssembler orgModelAssembler;
@@ -94,6 +98,18 @@ public class MeController {
         notiService.markAllNotisAsRead(principal.getUser());
 
         return ResponseEntity.noContent().build();
+    }
+
+    // Update my profile
+    @PutMapping()
+    public ResponseEntity<EntityModel<UserResponse>> updateMyProfile(
+            @RequestBody @Valid UpdateUserProfileRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        Long userId = principal.getUser().getId();
+        User response = userService.updateUserProfile(userId, request);
+
+        return ResponseEntity.ok(userModelAssembler.toModel(response));
     }
 
 }

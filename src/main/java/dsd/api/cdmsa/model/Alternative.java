@@ -39,6 +39,13 @@ public class Alternative {
     @Column(length = 2000)
     private String cons;
 
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String xml;
+
+    @Column(columnDefinition = "TEXT")
+    private String addition;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private java.time.Instant createdAt;
 

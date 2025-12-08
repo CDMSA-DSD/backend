@@ -6,5 +6,6 @@ public record CreateAlternativeRequest(
                 @NotBlank String title,
                 @NotBlank String description,
                 String pros,
-                String cons) {
+                String cons,
+                String xml) {
 }

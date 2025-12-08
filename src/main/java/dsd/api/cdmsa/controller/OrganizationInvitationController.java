@@ -31,7 +31,7 @@ public class OrganizationInvitationController {
     private final OrganizationInvitationService service;
 
     private InvitationModelAssembler invitationModelAssembler;
-    private PagedResourcesAssembler<OrganizationInvitation> pagedResourcesAssembler; 
+    // private PagedResourcesAssembler<OrganizationInvitation> pagedResourcesAssembler;
 
     @PostMapping
     @PreAuthorize("@permissionService.canManageOrg(principal)")
@@ -54,10 +54,21 @@ public class OrganizationInvitationController {
     public ResponseEntity<PagedModel<EntityModel<InvitationResponse>>> getAllInvitations(
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam(defaultValue = "0", required = false) int page,
-            @RequestParam(defaultValue = "2", required = false) int size) {
+            @RequestParam(defaultValue = "2", required = false) int size,
+            PagedResourcesAssembler<OrganizationInvitation> pagedResourcesAssembler) {
 
         Page<OrganizationInvitation> users = service.findAllInvitations(principal.getOrgId(),page, size);
         return ResponseEntity.ok(pagedResourcesAssembler.toModel(users, invitationModelAssembler));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteInvitation(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        service.deleteInvitation(id, principal);
+
+        return ResponseEntity.noContent().build();
     }
     
 }
