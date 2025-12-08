@@ -1,5 +1,7 @@
 package dsd.api.cdmsa.model;
 
+import java.util.Set;
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -11,6 +13,8 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Comment {
+
+    private final int MAX_CONTENT_FOR_NOTI = 20;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -52,4 +56,35 @@ public class Comment {
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.Set<Comment> replies = new java.util.HashSet<>();
+
+    @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<UserMention> mentions = new java.util.HashSet<>();
+
+
+    public void addMention(User user){
+        UserMention mention = new UserMention(
+            new UserCommentId(user.getId(),this.id),
+            user,
+            this
+        );
+        this.mentions.add(mention);
+        user.getMentions().add(mention);
+    }
+
+    public String getSummary(){
+        if (content.length() <= MAX_CONTENT_FOR_NOTI) {
+            return content;
+        }
+        
+        String cut = content.substring(0, MAX_CONTENT_FOR_NOTI);
+
+        int lastSpace = cut.lastIndexOf("");
+        if (lastSpace > 0) {
+            cut = cut.substring(0,lastSpace);
+        }
+
+        return cut + "...";
+
+    }
+
 }

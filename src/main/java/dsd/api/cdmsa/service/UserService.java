@@ -2,6 +2,8 @@ package dsd.api.cdmsa.service;
 
 import java.security.InvalidParameterException;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import dsd.api.cdmsa.dto.*;
 import org.springframework.data.domain.*;
@@ -14,7 +16,6 @@ import org.springframework.stereotype.Service;
 import dsd.api.cdmsa.exception.UserExistsException;
 import dsd.api.cdmsa.exception.UserNotFoundException;
 import dsd.api.cdmsa.model.OrganizationInvitation;
-import dsd.api.cdmsa.mapper.UserMapper;
 import dsd.api.cdmsa.model.User;
 import dsd.api.cdmsa.model.UserPrincipal;
 import dsd.api.cdmsa.repository.UserRepository;
@@ -51,18 +52,18 @@ public class UserService {
         throw new UserExistsException(user.getFirstname() + " " + user.getLastname());
     }
 
-     public User createUserByInvitation(SignInRequest registration, String token) {
-        
+    public User createUserByInvitation(SignInRequest registration, String token) {
 
-        OrganizationInvitation invitation = invitationService.getInvitationByToken(token); // retrive invitation with that token
+        OrganizationInvitation invitation = invitationService.getInvitationByToken(token); // retrive invitation with
+                                                                                           // that token
 
-         // Creates the user (set all the parameters)
-            User user = new User();
-            user.setFirstname(registration.firstname());
-            user.setLastname(registration.lastname());
-            user.setEmail(registration.email());
-            user.setPassword(registration.password()); // Hashed later in createUser
-            user.setOrg(invitation.getOrg());
+        // Creates the user (set all the parameters)
+        User user = new User();
+        user.setFirstname(registration.firstname());
+        user.setLastname(registration.lastname());
+        user.setEmail(registration.email());
+        user.setPassword(registration.password()); // Hashed later in createUser
+        user.setOrg(invitation.getOrg());
 
         return createUser(user);
     }
@@ -78,7 +79,8 @@ public class UserService {
             boolean isAdmin = isOrgAdmin(user);
             List<ContextByAdminResponse> contextsIsAdmin = contextService.findContextByAdmin(user);
 
-            UserResponse dto = UserMapper.toDto(user);
+            UserResponse dto = UserResponse.fromEntity(user);
+
             return new LoginResponse(dto, token, isAdmin, contextsIsAdmin);
 
         } else {
@@ -100,10 +102,6 @@ public class UserService {
         }
     }
 
-    public boolean isOrgAdmin (User user) {
-        return user.getId().equals(user.getOrg().getAdminUser().getId());
-    }
-
     public User searchById(Long id) {
         User user = repository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
         return user;
@@ -114,8 +112,29 @@ public class UserService {
         return repository.findByOrgId(orgId, pageable);
     }
 
+    public List<User> findAllUsersByid(List<Long> userIds, Long orgId) {
+        List<User> users = repository.findByIdInAndOrgId(userIds, orgId);
+
+        Set<Long> foundIds = users.stream()
+                .map(User::getId)
+                .collect(Collectors.toSet());
+
+        List<Long> missing = userIds.stream()
+                .filter(id -> !foundIds.contains(id))
+                .toList();
+
+        if (!missing.isEmpty()) {
+            throw new UserNotFoundException(missing);
+        }
+        return users;
+    }
+
     public boolean existUserById(Long id) {
         return repository.existsById(id);
+    }
+
+    public boolean isOrgAdmin(User user) {
+        return user.getId().equals(user.getOrg().getAdminUser().getId());
     }
 
     public void deleteUser(Long id) {

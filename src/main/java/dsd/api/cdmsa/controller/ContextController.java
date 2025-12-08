@@ -4,6 +4,8 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -23,9 +25,11 @@ import dsd.api.cdmsa.dto.CreateContextRequest;
 import dsd.api.cdmsa.dto.PromoteContextAdminRequest;
 import dsd.api.cdmsa.dto.UpdateContextRequest;
 import dsd.api.cdmsa.exception.UserNotFoundException;
+import dsd.api.cdmsa.model.User;
 import dsd.api.cdmsa.model.UserPrincipal;
 import dsd.api.cdmsa.service.ContextService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -92,9 +96,11 @@ public class ContextController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ContextResponse> getContext(
-            @PathVariable Long id,
-            HttpServletRequest http) {
-        Long userId = getCurrentUserId(http);
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long id) {
+
+        User user = principal.getUser();
+        Long userId = user.getId();
         ContextResponse context = contextService.getContext(userId, id);
         return ResponseEntity.ok(context);
     }
@@ -196,13 +202,13 @@ public class ContextController {
      */
 
     @PostMapping("/{contextId}/members")
+    @PreAuthorize("@permissionService.canManageContext(principal,#contextId)")
     public ResponseEntity<ContextMemberResponse> addMember(
             @PathVariable Long contextId,
-            @RequestBody AddContextMemberRequest request,
-            HttpServletRequest http) {
-        Long userId = getCurrentUserId(http);
+            @Valid @RequestBody AddContextMemberRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
 
-        ContextMemberResponse response = contextService.addMember(userId, contextId, request);
+        ContextMemberResponse response = contextService.addMember(principal, contextId, request);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

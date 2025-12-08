@@ -1,18 +1,26 @@
 package dsd.api.cdmsa.service;
 
+import dsd.api.cdmsa.assembler.ContextSummaryModelAssembler;
+import dsd.api.cdmsa.assembler.UserSummaryModelAssembler;
 import dsd.api.cdmsa.dto.*;
 import dsd.api.cdmsa.model.*;
+import dsd.api.cdmsa.model.event.RfcUpdatedEvent;
+import dsd.api.cdmsa.model.event.UserMentionCreatedEvent;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import dsd.api.cdmsa.repository.*;
 import jakarta.persistence.EntityNotFoundException;
+
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import dsd.api.cdmsa.exception.RfcAlternativeBadRequestException;
@@ -49,34 +57,46 @@ public class RfcService {
 
     // Folder where to upload attachments (all inside here right now)
     private final String UPLOAD_DIR = "C:\\Users\\carlo\\OneDrive\\Desktop\\uploads\\";
+    private final UserReviewerRepository userReviewerRepository;
+    private final ContextReviewerRepository contextReviewerRepository;
+    private final UserObserverRepository userObserverRepository;
+
+    private final UserService userService;
+    private final ContextService contextService;
+
+    private final UserSummaryModelAssembler userSummaryModelAssembler;
+    private final ContextSummaryModelAssembler contextSummaryModelAssembler;
+
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
-    public RfcResponse postCommentToRfc(Long rfcId, Long userId, CreateCommentRequest request) {
-        // in the future we should check that the user must be a reviewer of the RFC in
-        // order to post a comment
-        // ...
+    public RfcResponse postCommentToRfc(Long rfcId, User author, Long orgId, CreateCommentRequest request) {
 
-        RFC rfc = rfcRepository.findById(rfcId)
-                .orElseThrow(() -> new RfcNotFoundException("RFC not found"));
+        RFC rfc = getRfcById(rfcId);
 
         if (rfc.getStatus() != RFC.Status.UNDER_REVIEW) {
             throw new RfcBadRequestException("Comments are not allowed on closed RFCs");
         }
-
-        User author = userRepository.findById(userId)
-                .orElseThrow(() -> new RfcNotFoundException("User not found"));
 
         Comment comment = new Comment();
         comment.setAuthor(author);
         comment.setContent(request.content().trim());
         comment.setRfc(rfc);
 
+        Set<User> mentions = null;
+
+        // If the request have mentions, we handle them
+        if (request.mentions() != null && !request.mentions().isEmpty()) {
+            mentions = userService.findAllUsersByid(request.mentions(), orgId).stream().collect(Collectors.toSet());
+            mentions.forEach(comment::addMention);
+        }
+
         // IF parentId is not null, add a parent-child relationship
         if (request.parentId() != null) {
             Comment parent = commentRepository.findById(request.parentId())
                     .orElseThrow(() -> new RfcNotFoundException("Parent comment not found"));
 
-            // Validación extra: el parent debe pertenecer al mismo RFC
+            // Extra validation: parent must belong to same RFC
             if (!parent.getRfc().getId().equals(rfcId)) {
                 throw new RfcBadRequestException("Reply comment must belong to the same RFC");
             }
@@ -84,9 +104,21 @@ public class RfcService {
             comment.setParent(parent);
         }
 
-        commentRepository.save(comment);
+        comment = commentRepository.save(comment);
 
-        return getRfcById(rfcId);
+        if (mentions != null) {
+            UserMentionCreatedEvent event = new UserMentionCreatedEvent(
+                    comment.getId(),
+                    orgId,
+                    rfcId,
+                    comment.getSummary(),
+                    author.getEmail(),
+                    mentions.stream().map(User::getId).toList());
+
+            eventPublisher.publishEvent(event);
+        }
+
+        return toDetailedResponse(getRfcById(rfcId));
     }
 
     // ---------- US-12: Create RFC ----------
@@ -132,6 +164,8 @@ public class RfcService {
 
         // Persist and map
         RFC saved = rfcRepository.save(rfc);
+
+        asignReviewersToRfc(new ReviewersRequest(List.of(userId), null), saved.getId(), orgId);
 
         // Check attachments presence
         if (files != null && !files.isEmpty()) {
@@ -210,6 +244,11 @@ public class RfcService {
         return rfcAttachmentRepository.save(att);
     }
 
+    public boolean isAuthor(User user, Long rfcId) {
+        RFC rfc = getRfcById(rfcId);
+        return rfc.getUser().getId().equals(user.getId());
+    }
+
     @Transactional(readOnly = true)
     public Page<RfcResponse> listRfcs(Pageable pageable) {
         return rfcRepository.findAll(pageable)
@@ -228,10 +267,10 @@ public class RfcService {
     }
 
     @Transactional(readOnly = true)
-    public RfcResponse getRfcById(Long rfcId) {
+    public RFC getRfcById(Long rfcId) {
         RFC rfc = rfcRepository.findById(rfcId)
                 .orElseThrow(() -> new RfcNotFoundException("RFC not found with id " + rfcId));
-        return toDetailedResponse(rfc);
+        return rfc;
     }
 
     /**
@@ -247,23 +286,37 @@ public class RfcService {
 
         // Determine if the requesting user is the author of the RFC
         boolean isAuthor = rfc.getUser().getId().equals(userId);
+
+        boolean isWatching = userObserverRepository.existsById(new UserRFCId(userId, rfcId));
+
+        List<EntityModel<UserSummaryResponse>> userReviewers = userReviewerRepository.findAllByRfc(rfc).stream()
+                .map(reviewer -> userSummaryModelAssembler.toModel(reviewer.getUser()))
+                .toList();
+
+        List<EntityModel<ContextSummaryResponse>> contextReviewrs = contextReviewerRepository.findAllByRfc(rfc).stream()
+                .map(context -> contextSummaryModelAssembler.toModel(context.getContext()))
+                .toList();
+
         return new RfcSpecificResponse(
-            rfc.getId(),
-            rfc.getTitle(),
-            rfc.getDescription(),
-            rfc.getUser() != null ? rfc.getUser().getId() : null,
-            rfc.getUser() != null ? rfc.getUser().getFirstname() : null, //Before getName
-            rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
-            rfc.getOrg() != null ? rfc.getOrg().getId() : null,
-            rfc.getStatus(),
-            rfc.getAddition(),
-            rfc.getCreatedAt(),
-            rfc.getUpdatedAt(),
-            rfc.getXml(),
-            isAuthor,
-            detailedRfc.alternatives(),
-            detailedRfc.comments(),
-            detailedRfc.attachments());
+                rfc.getId(),
+                rfc.getTitle(),
+                rfc.getDescription(),
+                rfc.getUser() != null ? rfc.getUser().getId() : null,
+                rfc.getUser() != null ? rfc.getUser().getFirstname() : null, // Before getName
+                rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
+                rfc.getOrg() != null ? rfc.getOrg().getId() : null,
+                rfc.getStatus(),
+                rfc.getAddition(),
+                rfc.getCreatedAt(),
+                rfc.getUpdatedAt(),
+                rfc.getXml(),
+                isAuthor,
+                isWatching,
+                userReviewers,
+                contextReviewrs,
+                detailedRfc.alternatives(),
+                detailedRfc.comments(),
+                detailedRfc.attachments());
     }
 
     private RfcResponse toResponse(RFC rfc) {
@@ -274,7 +327,7 @@ public class RfcService {
                 rfc.getTitle(),
                 rfc.getDescription(),
                 rfc.getUser() != null ? rfc.getUser().getId() : null,
-                rfc.getUser() != null ? rfc.getUser().getFirstname() : null, //Before getName
+                rfc.getUser() != null ? rfc.getUser().getFirstname() : null, // Before getName
                 rfc.getTemplate() != null ? rfc.getTemplate().getId() : null,
                 rfc.getOrg() != null ? rfc.getOrg().getId() : null,
                 rfc.getStatus(),
@@ -361,6 +414,44 @@ public class RfcService {
 
     // ---------- Alternatives (POST & GET) ----------
 
+    @Transactional
+    public AlternativeResponse addAlternative(Long rfcId, Long userId, CreateAlternativeRequest request) {
+
+        // Load RFC
+        RFC rfc = getRfcById(rfcId);
+
+        // Check status: only UNDER_REVIEW allows new alternatives
+        if (rfc.getStatus() != RFC.Status.UNDER_REVIEW) {
+            throw new RfcInvalidStatusException(
+                    "Alternatives can only be created for RFCs in UNDER_REVIEW status");
+        }
+
+        // Build and persist alternative
+        Alternative alternative = new Alternative();
+        alternative.setRfc(rfc);
+        alternative.setTitle(request.title().trim());
+        alternative.setDescription(request.description().trim());
+        alternative.setAuthor(rfc.getUser());
+
+        // If pros/cons exist in the request and entity:
+        alternative.setPros(request.pros());
+        alternative.setCons(request.cons());
+
+        Alternative saved = alternativeRepository.save(alternative);
+        // Update RFC updated timestamp to reflect new alternative
+        rfc.setUpdatedAt(java.time.Instant.now());
+        rfcRepository.save(rfc);
+
+        List<Long> subscribers = rfc.getObservers().stream()
+                .map(observer -> observer.getUser().getId())
+                .toList();
+
+        RfcUpdatedEvent event = new RfcUpdatedEvent(rfc.getOrg().getId(), rfcId, rfc.getTitle(), subscribers);
+
+        eventPublisher.publishEvent(event);
+
+        return AlternativeResponse.fromEntity(saved);
+    }
 
     @Transactional(readOnly = true)
     public List<AlternativeResponse> listAlternatives(Long rfcId) {
@@ -398,8 +489,7 @@ public class RfcService {
 
     @Transactional
     public RfcResponse closeRfc(Long rfcId, Long userId, CloseRfcRequest request) {
-        RFC rfc = rfcRepository.findById(rfcId)
-                .orElseThrow(() -> new RfcNotFoundException("RFC not found with id " + rfcId));
+        RFC rfc = getRfcById(rfcId);
 
         if (rfc.getStatus() != RFC.Status.UNDER_REVIEW) {
             throw new RfcInvalidStatusException("RFC is not under review");
@@ -435,6 +525,15 @@ public class RfcService {
         }
 
         RFC saved = rfcRepository.save(rfc);
+
+         List<Long> subscribers = rfc.getObservers().stream()
+                .map(observer -> observer.getUser().getId())
+                .toList();
+
+        RfcUpdatedEvent event = new RfcUpdatedEvent(rfc.getOrg().getId(), rfcId, rfc.getTitle(), subscribers);
+
+        eventPublisher.publishEvent(event);
+
         return toResponse(saved);
     }
 
@@ -478,6 +577,84 @@ public class RfcService {
         int yesCount = voteRepository.countByAlternativeAndOutcome(alternative, true);
         int noCount = voteRepository.countByAlternativeAndOutcome(alternative, false);
         return new VoteResponse(yesCount, noCount);
+    }
+
+    @Transactional
+    public void asignReviewersToRfc(ReviewersRequest reviewers, Long rfcId, Long orgId) {
+
+        List<Long> userIds = reviewers.userIds();
+        List<Long> contetxIds = reviewers.contextIds();
+        RFC rfc = getRfcById(rfcId);
+
+        if (userIds != null && !userIds.isEmpty()) {
+            List<User> users = userService.findAllUsersByid(userIds, orgId);
+
+            List<UserReviewer> userReviewers = users.stream()
+                    .map(user -> {
+                        UserRFCId id = new UserRFCId(user.getId(), rfcId);
+                        UserReviewer userReviewer = new UserReviewer(id, user, rfc);
+
+                        return userReviewer;
+                    })
+                    .toList();
+
+            userReviewerRepository.saveAll(userReviewers);
+        }
+
+        if (contetxIds != null && !contetxIds.isEmpty()) {
+            List<Context> contexts = contextService.findAllContextByid(contetxIds);
+
+            List<ContextReviewer> contextReviewers = contexts.stream()
+                    .map(context -> {
+                        ContextRFCId id = new ContextRFCId(context.getId(), rfcId);
+                        ContextReviewer contextReviewer = new ContextReviewer(id, context, rfc);
+
+                        return contextReviewer;
+                    })
+                    .toList();
+
+            contextReviewerRepository.saveAll(contextReviewers);
+        }
+
+    }
+
+    public boolean isReviewer(User user, Long rfcId) {
+
+        boolean isReviewer = false;
+
+        UserRFCId uId = new UserRFCId(user.getId(), rfcId);
+        isReviewer = userReviewerRepository.existsById(uId);
+
+        if (!isReviewer) {
+            List<ContextMembership> contexts = contextService.findContextByUser(user);
+            if (!contexts.isEmpty()) {
+                ContextRFCId cId = new ContextRFCId();
+                cId.setRfcId(rfcId);
+                for (ContextMembership contextMembership : contexts) {
+                    cId.setContextId(contextMembership.getContext().getId());
+                    isReviewer |= contextReviewerRepository.existsById(cId);
+                }
+            }
+
+        }
+        return isReviewer;
+    }
+
+    public void subscribeToRfc(Long rfcId, UserPrincipal principal) {
+        if (!rfcRepository.existsByIdAndOrgId(rfcId, principal.getOrgId())) {
+            throw new RfcNotFoundException("RFC not found.");
+        }
+
+        User user = principal.getUser();
+        RFC rfc = getRfcById(rfcId);
+
+        UserRFCId id = new UserRFCId(rfcId, user.getId());
+        Observer observer = new Observer();
+        observer.setId(id);
+        observer.setRfc(rfc);
+        observer.setUser(user);
+
+        userObserverRepository.save(observer);
     }
 
     @Transactional

@@ -1,4 +1,6 @@
 package dsd.api.cdmsa.dto;
 
-public record AddContextMemberRequest(String email) {
+import jakarta.validation.constraints.NotBlank;
+
+public record AddContextMemberRequest(@NotBlank String email) {
 }

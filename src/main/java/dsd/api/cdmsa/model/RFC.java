@@ -46,7 +46,10 @@ public class RFC {
     private java.util.Set<Observer> observers = new java.util.HashSet<>();
 
     @OneToMany(mappedBy = "rfc", cascade = CascadeType.ALL, orphanRemoval = true)
-    private java.util.Set<Reviewer> reviewers = new java.util.HashSet<>();
+    private java.util.Set<UserReviewer> userReviewers = new java.util.HashSet<>();
+
+    @OneToMany(mappedBy = "rfc", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.Set<ContextReviewer> contextReviewers = new java.util.HashSet<>();
 
     @OneToMany(mappedBy = "rfc", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.Set<Comment> comments = new java.util.HashSet<>();

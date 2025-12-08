@@ -5,10 +5,11 @@ import org.springframework.hateoas.PagedModel;
 import org.springframework.data.web.PagedResourcesAssembler;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import dsd.api.cdmsa.assembler.UserModelAssembler;
+import dsd.api.cdmsa.assembler.UserResponseModelAssembler;
 import dsd.api.cdmsa.dto.UserResponse;
 import dsd.api.cdmsa.exception.*;
 import dsd.api.cdmsa.model.User;
@@ -25,16 +26,17 @@ public class UserController {
 
     private final UserService service;
 
-    private UserModelAssembler userModelAssembler;
+    private UserResponseModelAssembler userResponseModelAssembler;
     private PagedResourcesAssembler<User> pagedResourcesAssembler;
 
     // GET user (individual)
     @GetMapping(value = "/{id}")
+    @PreAuthorize("@permissionService.canManageOrg(principal)")
     public ResponseEntity<EntityModel<UserResponse>> getUser(@PathVariable Long id) {
         // Search user
         User user = service.searchById(id);
         // Return it with links
-        return ResponseEntity.ok(userModelAssembler.toModel(user));
+        return ResponseEntity.ok(userResponseModelAssembler.toModel(user));
     }
 
     // GET users (collection)
@@ -45,7 +47,7 @@ public class UserController {
             @RequestParam(defaultValue = "2", required = false) int size) {
 
         Page<User> users = service.findAllUsers(principal.getOrgId(),page, size);
-        return ResponseEntity.ok(pagedResourcesAssembler.toModel(users, userModelAssembler));
+        return ResponseEntity.ok(pagedResourcesAssembler.toModel(users, userResponseModelAssembler));
     }
 
     /*
@@ -65,8 +67,10 @@ public class UserController {
      * return ResponseEntity.noContent().build();
      * }
      */
+
     // DELETE user
     @DeleteMapping("/{id}")
+    @PreAuthorize("@permissionService.canManageOrg(principal)")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         if (service.existUserById(id)) {
             service.deleteUser(id);

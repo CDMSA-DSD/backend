@@ -340,42 +340,4 @@ public class UserServiceTest {
 
         assertThrows(InvalidParameterException.class, () -> userService.verify(request));
     }
-
-    // ---------------------------------------------------
-    // verify(LoginRequest)
-    // ---------------------------------------------------
-
-    @Test
-    void isOrgAdmin_shouldReturnTrue_whenUserIsAdminOfOrganization() {
-        User admin = new User();
-        admin.setId(1L);
-
-        Organization org = new Organization();
-        org.setAdminUser(admin);
-
-        User user = new User();
-        user.setId(1L);
-        user.setOrg(org);
-
-        boolean result = userService.isOrgAdmin(user);
-
-        assertTrue(result);
-    }
-
-    @Test
-    void isOrgAdmin_shouldReturnFalse_whenUserIsNotAdmin() {
-        User admin = new User();
-        admin.setId(1L);
-
-        Organization org = new Organization();
-        org.setAdminUser(admin);
-
-        User user = new User();
-        user.setId(2L);
-        user.setOrg(org);
-
-        boolean result = userService.isOrgAdmin(user);
-
-        assertFalse(result);
-    }
 }
