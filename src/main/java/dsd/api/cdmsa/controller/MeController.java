@@ -109,7 +109,7 @@ public class MeController {
         Long userId = principal.getUser().getId();
         User response = userService.updateUserProfile(userId, request);
 
-        return ResponseEntity.ok(userModelAssembler.toModel(response));
+        return ResponseEntity.ok(userResponseModelAssembler.toModel(response));
     }
 
 }
