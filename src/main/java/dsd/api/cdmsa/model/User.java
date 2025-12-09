@@ -6,8 +6,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.springframework.hateoas.RepresentationModel;
-
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -20,7 +18,7 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class User extends RepresentationModel<User> {
+public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -49,6 +47,9 @@ public class User extends RepresentationModel<User> {
     @Column(nullable = false)
     private Instant joinedAt;
 
+    @Column(name = "job_title", nullable = false)
+    private String jobTitle = "Developer";  // Developer as default
+
     @OneToMany(mappedBy = "user")
     private List<RFC> rfcs = new ArrayList<>();
 
@@ -56,7 +57,7 @@ public class User extends RepresentationModel<User> {
     private Set<Observer> observers = new java.util.HashSet<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<Reviewer> reviewers = new java.util.HashSet<>();
+    private Set<UserReviewer> reviewers = new java.util.HashSet<>();
 
     @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Comment> comment = new java.util.HashSet<>();
@@ -66,6 +67,12 @@ public class User extends RepresentationModel<User> {
 
     @OneToMany(mappedBy = "createdBy", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<OrganizationInvitation> invitations = new HashSet<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<UserMention> mentions = new java.util.HashSet<>();
+
+    @OneToMany(mappedBy = "targetUser", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Notification> notifications = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {

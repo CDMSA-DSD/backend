@@ -2,12 +2,10 @@ package dsd.api.cdmsa.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dsd.api.cdmsa.dto.AdrResponse;
-import dsd.api.cdmsa.dto.AdrSpecificResponse;
-import dsd.api.cdmsa.dto.CreateAdrRequest;
-import dsd.api.cdmsa.dto.PublishAdrRequest;
-import dsd.api.cdmsa.dto.UpdateAdrRequest;
+import dsd.api.cdmsa.dto.*;
 import dsd.api.cdmsa.model.*;
+import dsd.api.cdmsa.exception.RfcAlternativeNotAllowedException;
+import dsd.api.cdmsa.exception.RfcInvalidStatusException;
 import dsd.api.cdmsa.repository.AdrRepository;
 import dsd.api.cdmsa.repository.RfcRepository;
 import dsd.api.cdmsa.repository.UserRepository;
@@ -21,9 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 
 @Service
@@ -109,8 +105,34 @@ public class AdrService {
         ADR adr = adrRepository.findByIdAndRfc_Org_Id(id, orgId)
                 .orElseThrow(() -> new EntityNotFoundException("ADR not found with id " + id));
 
+        RFC rfc = adr.getRfc();
+
         boolean author = adr.getRfc().getUser().getId().equals(userId);
         System.out.println("Is user " + userId + " the author of the ADR? " + author);
+
+        List<PartecipatingUser> reviewers = (rfc.getReviewers() == null) ? Collections.emptyList() :
+                rfc.getReviewers().stream()
+                        .map(r -> new PartecipatingUser(
+                                r.getUser().getId(),
+                                r.getUser().getFirstname() + " " + r.getUser().getLastname(),
+                                "REVIEWER",
+                                // TODO: delete null and use the commented line
+                                // r.getUser().getJobTitle()
+                                null
+                        ))
+                        .toList();
+
+        List<PartecipatingUser> observers = (rfc.getObservers() == null) ? Collections.emptyList() :
+                rfc.getObservers().stream()
+                        .map(o -> new PartecipatingUser(
+                                o.getUser().getId(),
+                                o.getUser().getFirstname() + " " + o.getUser().getLastname(),
+                                "OBSERVER",
+                                // TODO: delete null and use the commented line
+                                // o.getUser().getJobTitle()
+                                null
+                        ))
+                        .toList();
 
         return new AdrSpecificResponse(
                 adr.getId(),
@@ -123,7 +145,9 @@ public class AdrService {
                 author,
                 adr.getCreatedAt(),
                 adr.getUpdatedAt(),
-                adr.getGitHubUrl()          // null until i approve the adr
+                adr.getGitHubUrl(),          // null until i approve the adr
+                reviewers,
+                observers
         );
     }
 
@@ -324,6 +348,32 @@ public class AdrService {
         JsonNode rootNode = objectMapper.readTree(response.getBody());
         return rootNode.get("content").get("html_url").asText();
 
+    }
+
+    @Transactional
+    public void deleteAdr(Long adrId, Long orgId, Long userId) {
+        dsd.api.cdmsa.model.ADR adr = adrRepository.findByIdAndRfc_Org_Id(adrId, orgId)
+                .orElseThrow(() -> new EntityNotFoundException("ADR not found"));
+
+        if (!adr.getRfc().getUser().getId().equals(userId)) {
+            throw new RfcAlternativeNotAllowedException("Only the author can delete this ADR");
+        }
+
+        if (adr.getStatus() == dsd.api.cdmsa.model.ADR.Status.APPROVED || adr.getGitHubUrl() != null) {
+            throw new RfcInvalidStatusException("Cannot delete an ADR that has already been published/approved.");
+        }
+
+        RFC rfc = adr.getRfc();
+
+        // We "reset" the RFC status
+        rfc.setStatus(RFC.Status.UNDER_REVIEW);
+
+        rfc.setAdr(null);
+
+        rfcRepository.save(rfc);
+
+        // Deleting the adr
+        adrRepository.delete(adr);
     }
 
     /*

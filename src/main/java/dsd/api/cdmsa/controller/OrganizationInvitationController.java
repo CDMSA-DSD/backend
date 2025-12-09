@@ -8,6 +8,7 @@ import org.springframework.data.web.PagedResourcesAssembler;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.PagedModel;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,30 +31,44 @@ public class OrganizationInvitationController {
     private final OrganizationInvitationService service;
 
     private InvitationModelAssembler invitationModelAssembler;
-    private PagedResourcesAssembler<OrganizationInvitation> pagedResourcesAssembler; 
+    // private PagedResourcesAssembler<OrganizationInvitation> pagedResourcesAssembler;
 
     @PostMapping
+    @PreAuthorize("@permissionService.canManageOrg(principal)")
     public ResponseEntity<LinkResponse> createLink(@AuthenticationPrincipal UserPrincipal principal) {
+       
         LinkResponse link = service.createGeneralInvitationLink(principal);
-                System.out.println("INVITATION CREATED");
 
         return ResponseEntity.created(linkTo(methodOn(OrganizationInvitationController.class).getInvitation(link.id())).toUri()).body(link);
     }
 
     @GetMapping (value = "/{id}")
+    @PreAuthorize("@permissionService.canManageOrg(principal)")
     public ResponseEntity<EntityModel<InvitationResponse>> getInvitation(@PathVariable Long id) {
         OrganizationInvitation invitation = service.getInvitation(id);
         return ResponseEntity.ok(invitationModelAssembler.toModel(invitation));
     }
 
     @GetMapping
+    @PreAuthorize("@permissionService.canManageOrg(principal)")
     public ResponseEntity<PagedModel<EntityModel<InvitationResponse>>> getAllInvitations(
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam(defaultValue = "0", required = false) int page,
-            @RequestParam(defaultValue = "2", required = false) int size) {
+            @RequestParam(defaultValue = "2", required = false) int size,
+            PagedResourcesAssembler<OrganizationInvitation> pagedResourcesAssembler) {
 
         Page<OrganizationInvitation> users = service.findAllInvitations(principal.getOrgId(),page, size);
         return ResponseEntity.ok(pagedResourcesAssembler.toModel(users, invitationModelAssembler));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteInvitation(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        service.deleteInvitation(id, principal);
+
+        return ResponseEntity.noContent().build();
     }
     
 }

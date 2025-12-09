@@ -33,7 +33,7 @@ public class OrgController {
     private final OrgService orgService;
 
     private OrgModelAssembler orgModelAssembler;
-    private PagedResourcesAssembler<Organization> pagedResourcesAssembler;
+    // private PagedResourcesAssembler<Organization> pagedResourcesAssembler;
 
     private UserPrincipal getAuthenticatedPrincipal() {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -64,7 +64,8 @@ public class OrgController {
     public ResponseEntity<PagedModel<EntityModel<OrganizationResponseAlt>>> getAllUsers(
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam(defaultValue = "0", required = false) int page,
-            @RequestParam(defaultValue = "2", required = false) int size) {
+            @RequestParam(defaultValue = "2", required = false) int size,
+            PagedResourcesAssembler<Organization> pagedResourcesAssembler) {
 
         Page<Organization> orgs = orgService.findAllOrgs(principal.getOrgId(), page, size);
         return ResponseEntity.ok(pagedResourcesAssembler.toModel(orgs, orgModelAssembler));

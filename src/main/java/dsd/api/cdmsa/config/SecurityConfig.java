@@ -12,10 +12,15 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.http.HttpMethod;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import jakarta.servlet.http.HttpServletResponse;
+
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -44,15 +49,48 @@ public class SecurityConfig {
                 .csrf(customizer -> customizer.disable())
                 // Public endpoints: permit preflight OPTIONS and auth endpoints
                 .authorizeHttpRequests(request -> request
-                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                    .requestMatchers("/auth/login", "/auth/register-org", "/auth/register-invitation").permitAll()
-                    // Any other request requires authentication
-                    .anyRequest().authenticated())
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/auth/login", "/auth/register-org", "/auth/register-invitation").permitAll()
+                        .requestMatchers("/adrs/**", "/contexts/**", "/me/**", "/orgs/**", "/invitations/**",
+                                "/rfcs/**",
+                                "/users/**")
+                        .authenticated()
+                        // Any other request requires authentication
+                        .anyRequest().permitAll())
                 // Disable session creation; every request must bring its own token
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) 
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex
+                        // NON-authenticated user or absent/incorrect token -> 401
+                        .authenticationEntryPoint(unauthorizedEntryPoint())
+                        // Authenticated user but without authorization -> 403
+                        .accessDeniedHandler(forbiddenHandler()))
                 // Run JWT filter before the default authentication filter
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class) 
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
+    }
+
+    @Bean
+    public AuthenticationEntryPoint unauthorizedEntryPoint() {
+        return (request, response, authException) -> {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setHeader("WWW-Authenticate",
+                    "Bearer error=\"invalid_token\", error_description=\"Authentication required\"");
+            response.setContentType("application/json");
+            response.getWriter().write("""
+                        {"error":"invalid_token","error_description":"Authentication required"}
+                    """);
+        };
+    }
+
+    @Bean
+    public AccessDeniedHandler forbiddenHandler() {
+        return (request, response, accessDeniedException) -> {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403
+            response.setContentType("application/json");
+            response.getWriter().write("""
+                        {"error":"forbidden","message":"You do not have permission to access this resource."}
+                    """);
+        };
     }
 
     @Bean
@@ -60,7 +98,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         // Allow the frontend dev server explicitly; don't use wildcard with credentials
         configuration.setAllowedOrigins(java.util.Arrays.asList("http://localhost:3000"));
-        configuration.setAllowedMethods(java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(java.util.Arrays.asList("Authorization", "Content-Type", "Accept", "Origin"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -70,7 +108,7 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
-         // Uses custom UserDetailsService + BCrypt to authenticate login credentials
+        // Uses custom UserDetailsService + BCrypt to authenticate login credentials
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;

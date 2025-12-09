@@ -2,8 +2,6 @@ package dsd.api.cdmsa.model;
 
 import java.time.Instant;
 
-import org.springframework.hateoas.RepresentationModel;
-
 import jakarta.persistence.*;
 
 import lombok.AllArgsConstructor;
@@ -16,7 +14,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class OrganizationInvitation extends RepresentationModel<OrganizationInvitation>{
+public class OrganizationInvitation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

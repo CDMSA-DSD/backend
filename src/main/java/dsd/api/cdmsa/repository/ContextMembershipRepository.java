@@ -14,6 +14,9 @@ public interface ContextMembershipRepository extends JpaRepository<ContextMember
     // Returns the membership of a given user in a given context.
     Optional<ContextMembership> findByContextIdAndUserId(Long contextId, Long userId);
 
+    // Returns the context of a given user
+    List<ContextMembership> findByUserId(Long userId);
+
     // Returns all memberships of a context (members).
     List<ContextMembership> findByContextId(Long contextId);
 
