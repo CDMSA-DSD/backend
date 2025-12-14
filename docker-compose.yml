@@ -1,22 +1,22 @@
 services:
-  mariadb:
-    image: mariadb:11.4   
-    container_name: cdmsa-mariadb
+  # UNICO DATABASE: Dati + Vettori
+  database:
+    image: pgvector/pgvector:pg16
+    container_name: cdmsa-postgres
     environment:
-      MARIADB_DATABASE: cdmsa           # db name
-      MARIADB_USER: cdmsa               # db user
-      MARIADB_PASSWORD: cdmsa           # user password
-      MARIADB_ROOT_PASSWORD: root       # root password
+      POSTGRES_DB: cdmsa
+      POSTGRES_USER: cdmsa
+      POSTGRES_PASSWORD: cdmsa
     ports:
-      - "3306:3306"                     
+      - "5432:5432"
     volumes:
-      - dbdata:/var/lib/mysql           
-    healthcheck:                        
-      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cdmsa"]
       interval: 5s
-      timeout: 3s
-      retries: 20
-    restart: unless-stopped             # reset if breaks down
+      timeout: 5s
+      retries: 5
 
 volumes:
-  dbdata:                               # volume where data is store
+  postgres_data:

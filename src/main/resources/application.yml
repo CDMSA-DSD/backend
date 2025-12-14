@@ -2,14 +2,38 @@ spring:
   application:
     name: cdmsa
 
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
+      - org.springframework.ai.model.azure.openai.autoconfigure.AzureOpenAiChatAutoConfiguration
 
   ai:
     openai:
-      api-key: "put here your openrouter token"
+      api-key: "openrouter key"
       base-url: https://openrouter.ai/api
       chat:
         options:
           model: mistralai/mistral-7b-instruct:free
+
+    azure:
+      openai:
+        api-key: "azure key"
+        endpoint: "azure endpoint"
+        embedding:
+          # Il nome esatto che hai dato al "Deployment" nello step 1
+          options:
+            deployment-name: text-embedding-3-small
+
+    # Configurazione Vector Store (Postgres)
+    vectorstore:
+      pgvector:
+        # Crea automaticamente la tabella 'vector_store'
+        initialize-schema: true
+        # Configurazione indice per performance (HNSW è lo standard)
+        index-type: HNSW
+        # Dimensione del modello gte-base (768)
+        dimension: 1536
+        distance-type: COSINE_DISTANCE
 
 
 server:
