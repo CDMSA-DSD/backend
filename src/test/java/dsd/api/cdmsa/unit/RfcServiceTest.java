@@ -1,10 +1,14 @@
 package dsd.api.cdmsa.unit;
 
 import dsd.api.cdmsa.assembler.ContextSummaryModelAssembler;
+import dsd.api.cdmsa.assembler.UserSummaryModelAssembler;
 import dsd.api.cdmsa.dto.*;
 import dsd.api.cdmsa.exception.*;
 import dsd.api.cdmsa.model.*;
+import dsd.api.cdmsa.model.event.RfcUpdatedEvent;
 import dsd.api.cdmsa.repository.*;
+import dsd.api.cdmsa.service.ContextService;
+import dsd.api.cdmsa.service.IngestionService;
 import dsd.api.cdmsa.service.RfcService;
 import dsd.api.cdmsa.service.UserService;
 
@@ -17,6 +21,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -43,6 +48,9 @@ class RfcServiceTest {
 
     @Mock
     private RfcRepository rfcRepository;
+
+    @Mock
+    private AdrRepository adrRepository;
 
     @Mock
     private AlternativeAttachmentRepository alternativeAttachmentRepository;
@@ -73,18 +81,30 @@ class RfcServiceTest {
 
     @Mock
     private UserObserverRepository userObserverRepository;
-    
-    @Mock
-    private UserService userService;
-    
+
     @Mock
     private ContextReviewerRepository contextReviewerRepository;
-    
-    @InjectMocks
-    private RfcService rfcService;
+
+    @Mock
+    private UserService userService;
+
+    @Mock
+    private ContextService contextService;
+
+    @Mock
+    private IngestionService ingestionService;
+
+    @Mock
+    private UserSummaryModelAssembler userSummaryModelAssembler;
 
     @Mock
     private ContextSummaryModelAssembler contextSummaryModelAssembler;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
+    @InjectMocks
+    private RfcService rfcService;
     
     // ------------------------------------------------------------
     // createRfc
@@ -119,11 +139,12 @@ class RfcServiceTest {
 
         // Mocks
         when(userRepository.findById(userId)).thenReturn(Optional.of(author));
-        when(userService.findAllUsersByid(List.of(userId),orgId)).thenReturn(List.of(author));
         when(templateRepository.findById(templateId)).thenReturn(Optional.of(template));
         when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
         when(rfcRepository.save(any(RFC.class))).thenReturn(rfc);
-        when(rfcRepository.findById(rfc.getId())).thenReturn(Optional.of(rfc));
+        when(rfcRepository.findById(100L)).thenReturn(Optional.of(rfc));
+
+        when(userService.findAllUsersByid(anyList(), eq(orgId))).thenReturn(List.of(author));
         
         // Mocks per la costruzione della risposta (allegati e commenti)
         when(commentRepository.findByRfcId(rfc.getId())).thenReturn(Collections.emptyList());
@@ -138,6 +159,8 @@ class RfcServiceTest {
         ArgumentCaptor<RFC> captor = ArgumentCaptor.forClass(RFC.class);
         verify(rfcRepository).save(captor.capture());
         assertEquals("My RFC", captor.getValue().getTitle());
+        verify(ingestionService).ingestRFC(any(RFC.class));
+        verify(userReviewerRepository).saveAll(anyList());
     }
 
     @Test
@@ -282,6 +305,7 @@ class RfcServiceTest {
 
         assertNotNull(response);
         verify(commentRepository).save(any(Comment.class));
+        verify(ingestionService).ingestRFC(rfc);
     }
 
     // ------------------------------------------------------------
@@ -337,9 +361,13 @@ class RfcServiceTest {
         Long rfcId = 1L;
         Long userId = 1L;
         Long orgId = 10L;
+        Long generatedAltId = 55L;
 
-        User author = new User(); author.setId(userId);
-        Organization org = new Organization(); org.setId(orgId);
+        User author = new User();
+        author.setId(userId);
+
+        Organization org = new Organization();
+        org.setId(orgId);
 
         RFC rfc = new RFC();
         rfc.setId(rfcId);
@@ -347,39 +375,40 @@ class RfcServiceTest {
         rfc.setUser(author);
         rfc.setOrg(org);
 
-        CreateAlternativeRequest request = new CreateAlternativeRequest("Alt", "Desc", "Pros", "Cons", null);
+        CreateAlternativeRequest request = new CreateAlternativeRequest("Alt Title", "Desc", "Pros", "Cons", null);
 
-        // 1. Mock find RFC
         when(rfcRepository.findById(rfcId)).thenReturn(Optional.of(rfc));
 
-        // 2. Mock save Alternative
         when(alternativeRepository.save(any(Alternative.class)))
                 .thenAnswer(invocation -> {
                     Alternative a = invocation.getArgument(0);
-                    a.setId(10L); // Simuliamo ID generato
+                    a.setId(generatedAltId);
                     return a;
                 });
 
-        // 3. Mock retrieve Alternative per costruire la Response (il service chiama getAlternativeByIdForOrg alla fine)
-        when(alternativeRepository.findById(10L)).thenAnswer(inv -> {
+        when(rfcRepository.save(any(RFC.class))).thenAnswer(i -> i.getArgument(0));
+
+        when(alternativeRepository.findById(generatedAltId)).thenAnswer(inv -> {
             Alternative a = new Alternative();
-            a.setId(10L);
+            a.setId(generatedAltId);
             a.setRfc(rfc);
             a.setAuthor(author);
-            a.setTitle("Alt");
-            a.setDescription("Desc");
+            a.setTitle("Alt Title");
             return Optional.of(a);
         });
 
-        // 4. Mock dependencies per Response
-        when(alternativeAttachmentRepository.findByAlternativeId(10L)).thenReturn(Collections.emptyList());
         when(voteRepository.countByAlternativeAndOutcome(any(), eq(true))).thenReturn(0);
         when(voteRepository.countByAlternativeAndOutcome(any(), eq(false))).thenReturn(0);
+        when(alternativeAttachmentRepository.findByAlternativeId(generatedAltId)).thenReturn(Collections.emptyList());
 
         AlternativeSpecificResponse response = rfcService.addAlternative(rfcId, userId, request, null);
 
         assertNotNull(response);
+        assertEquals("Alt Title", response.title());
+
         verify(alternativeRepository).save(any(Alternative.class));
+        verify(rfcRepository).save(any(RFC.class));
+        verify(ingestionService).ingestRFC(any(RFC.class));
     }
 
 
@@ -423,6 +452,35 @@ class RfcServiceTest {
 
         assertThrows(RfcAlternativeNotAllowedException.class,
                 () -> rfcService.closeRfc(rfcId, userId, request));
+    }
+
+    @Test
+    void closeRfc_shouldCloseWithoutAlternative_whenRequestHasNoAltId() {
+        Long rfcId = 1L;
+        Long userId = 1L;
+        User author = new User(); author.setId(userId);
+        Organization org = new Organization(); org.setId(10L);
+
+        RFC rfc = new RFC();
+        rfc.setId(rfcId);
+        rfc.setStatus(RFC.Status.UNDER_REVIEW);
+        rfc.setUser(author);
+        rfc.setOrg(org);
+
+        rfc.setObservers(new java.util.HashSet<>());
+
+        // Mocks
+        when(rfcRepository.findById(rfcId)).thenReturn(Optional.of(rfc));
+
+        when(rfcRepository.save(any(RFC.class))).thenAnswer(i -> i.getArgument(0));
+
+        when(commentRepository.findByRfcId(rfcId)).thenReturn(java.util.Collections.emptyList());
+
+        RfcResponse response = rfcService.closeRfc(rfcId, userId, new CloseRfcRequest(null, null));
+
+        assertEquals(RFC.Status.CLOSED_NON_DECIDED, response.status());
+        verify(ingestionService).ingestRFC(any(RFC.class));
+        verify(eventPublisher).publishEvent(any(RfcUpdatedEvent.class));
     }
 
     // ------------------------------------------------------------
@@ -618,31 +676,39 @@ class RfcServiceTest {
         Long orgId = 10L;
 
         User author = new User(); author.setId(userId);
+        Organization org = new Organization(); org.setId(orgId);
+
         RFC rfc = new RFC();
         rfc.setId(rfcId);
         rfc.setUser(author);
         rfc.setStatus(RFC.Status.UNDER_REVIEW);
-        Organization org = new Organization(); org.setId(orgId);
         rfc.setOrg(org);
 
-        // UpdateRequest: (title, description, ADDITION)
         UpdateRfcRequest request = new UpdateRfcRequest("New Title", "New Desc", "My Addition Note");
 
+        // Mock Find
         when(rfcRepository.findByIdAndOrgId(rfcId, orgId)).thenReturn(Optional.of(rfc));
-        // Mock getRfcByIdForOrg return
+
+        when(rfcRepository.save(any(RFC.class))).thenAnswer(i -> i.getArgument(0));
+
         when(rfcAttachmentRepository.findByRfcId(rfcId)).thenReturn(Collections.emptyList());
         when(commentRepository.findByRfcId(rfcId)).thenReturn(Collections.emptyList());
         when(alternativeRepository.findByRfcId(rfcId)).thenReturn(Collections.emptyList());
 
+        when(userObserverRepository.existsById(any(UserRFCId.class))).thenReturn(false);
+        when(userReviewerRepository.findAllByRfc(rfc)).thenReturn(Collections.emptyList());
+        when(contextReviewerRepository.findAllByRfc(rfc)).thenReturn(Collections.emptyList());
+
         rfcService.updateRfcText(rfcId, userId, orgId, request);
 
-        // Verifiche
         ArgumentCaptor<RFC> captor = ArgumentCaptor.forClass(RFC.class);
         verify(rfcRepository).save(captor.capture());
 
         RFC saved = captor.getValue();
         assertEquals("New Title", saved.getTitle());
-        assertEquals("My Addition Note", saved.getAddition()); // Verifica campo addition
+        assertEquals("My Addition Note", saved.getAddition());
+
+        verify(ingestionService).ingestRFC(saved);
     }
 
     @Test
@@ -666,6 +732,7 @@ class RfcServiceTest {
                 "T", "D", "P", "C", "Alt Addition");
 
         when(alternativeRepository.findById(altId)).thenReturn(Optional.of(alt));
+        when(rfcRepository.save(any(RFC.class))).thenAnswer(i -> i.getArgument(0));
         when(alternativeAttachmentRepository.findByAlternativeId(altId)).thenReturn(Collections.emptyList());
 
         AlternativeSpecificResponse response = rfcService.updateAlternative(altId, userId, request);
@@ -674,5 +741,6 @@ class RfcServiceTest {
         verify(alternativeRepository).save(captor.capture());
 
         assertEquals("Alt Addition", captor.getValue().getAddition());
+        verify(ingestionService).ingestRFC(rfc);
     }
 }

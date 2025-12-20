@@ -20,18 +20,15 @@ spring:
         api-key: "azure key"
         endpoint: "azure endpoint"
         embedding:
-          # Il nome esatto che hai dato al "Deployment" nello step 1
           options:
             deployment-name: text-embedding-3-small
 
-    # Configurazione Vector Store (Postgres)
     vectorstore:
       pgvector:
-        # Crea automaticamente la tabella 'vector_store'
+        # Create table vector_store
         initialize-schema: true
-        # Configurazione indice per performance (HNSW è lo standard)
         index-type: HNSW
-        # Dimensione del modello gte-base (768)
+        # Model dimension
         dimension: 1536
         distance-type: COSINE_DISTANCE
 
