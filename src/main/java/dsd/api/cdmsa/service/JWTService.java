@@ -24,7 +24,7 @@ public class JWTService {
     private String secretKey;
 
     // Token expiration time in milliseconds
-    @Value("${jwt.expiration:900000}") // default 15 min
+    @Value("${jwt.expiration:9000000}") // default 15 min
     private long jwtExpiration;
 
     // Generate a JWT with username as the subject
