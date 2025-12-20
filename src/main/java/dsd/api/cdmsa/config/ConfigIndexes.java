@@ -18,40 +18,30 @@ public class ConfigIndexes implements CommandLineRunner {
     @Transactional
     public void run(String... args) {
 
-        // Index for the search, on table RFC
-        // on title and description
-        recreateIndex("rfc", "ft_idx_rfc_combined", "title, description");
+        String rfcExpression = "to_tsvector('english', coalesce(title, '') || ' ' || coalesce(description, ''))";
+        recreateIndex("rfc", "ft_idx_rfc_combined", rfcExpression);
 
-        // Index for the search, on table ADR
-        // on title, context and decision
-        recreateIndex("adrs", "ft_idx_adr_combined", "title, context, decision");
+        String adrExpression = "to_tsvector('english', coalesce(title, '') || ' ' || coalesce(context, '') || ' ' || coalesce(decision, ''))";
+        recreateIndex("adrs", "ft_idx_adr_combined", adrExpression);
     }
 
-    private void recreateIndex(String tableName, String indexName, String columns) {
+    private void recreateIndex(String tableName, String indexName, String expression) {
         try {
-            // Check if index exists already
             Integer count = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(1) FROM information_schema.statistics " +
-                            "WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?",
+                    "SELECT COUNT(1) FROM pg_indexes WHERE tablename = ? AND indexname = ?",
                     Integer.class, tableName, indexName
             );
 
-            // If it exists, we delete to update every time
             if (count != null && count > 0) {
-                System.out.println("Index doesn't exist '" + indexName + "' on " + tableName + ". Regenerating...");
-                try {
-                    jdbcTemplate.execute("ALTER TABLE " + tableName + " DROP INDEX " + indexName);
-                } catch (Exception e) {
-                    System.out.println();
-                }
+                System.out.println("Index '" + indexName + "' exists on " + tableName + ". Dropping to regenerate...");
+                jdbcTemplate.execute("DROP INDEX " + indexName);
             }
 
-            // Creating the correct indexes
-            System.out.println("Creating index Full-Text '" + indexName + "' on " + tableName + " (" + columns + ")...");
+            System.out.println("Creating GIN Index '" + indexName + "' on " + tableName + "...");
+            String sql = "CREATE INDEX " + indexName + " ON " + tableName + " USING GIN (" + expression + ")";
+            jdbcTemplate.execute(sql);
 
-            jdbcTemplate.execute("ALTER TABLE " + tableName + " ADD FULLTEXT INDEX " + indexName + " (" + columns + ")");
-
-            System.out.println("Index '" + indexName + "' created/updated with success");
+            System.out.println("Index '" + indexName + "' created successfully.");
 
         } catch (Exception e) {
             System.err.println("Impossible configure index on '" + tableName + "'. Motivation: " + e.getMessage());

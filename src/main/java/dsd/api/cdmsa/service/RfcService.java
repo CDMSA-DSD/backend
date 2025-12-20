@@ -56,13 +56,15 @@ public class RfcService {
     private final AlternativeAttachmentRepository alternativeAttachmentRepository;
 
     // Folder where to upload attachments (all inside here right now)
-    private final String UPLOAD_DIR = "C:\\Users\\carlo\\OneDrive\\Desktop\\uploads\\";
+    // private final String UPLOAD_DIR = "C:\\Users\\carlo\\OneDrive\\Desktop\\uploads\\";
+    private final String uploadDir = System.getProperty("user.home") + File.separator + "cdmsa-uploads" + File.separator;
     private final UserReviewerRepository userReviewerRepository;
     private final ContextReviewerRepository contextReviewerRepository;
     private final UserObserverRepository userObserverRepository;
 
     private final UserService userService;
     private final ContextService contextService;
+    private final IngestionService ingestionService;
 
     private final UserSummaryModelAssembler userSummaryModelAssembler;
     private final ContextSummaryModelAssembler contextSummaryModelAssembler;
@@ -105,6 +107,8 @@ public class RfcService {
         }
 
         comment = commentRepository.save(comment);
+
+        ingestionService.ingestRFC(rfc);
 
         if (mentions != null) {
             UserMentionCreatedEvent event = new UserMentionCreatedEvent(
@@ -164,6 +168,8 @@ public class RfcService {
 
         // Persist and map
         RFC saved = rfcRepository.save(rfc);
+
+        ingestionService.ingestRFC(saved);
 
         asignReviewersToRfc(new ReviewersRequest(List.of(userId), null), saved.getId(), orgId);
 
@@ -225,19 +231,25 @@ public class RfcService {
 
         // Create folder where to save (if not present already)
         String uniqueFileName = System.currentTimeMillis() + "_" + originalFileName;
-        String fullPath = UPLOAD_DIR + uniqueFileName;
+        // String fullPath = UPLOAD_DIR + uniqueFileName;
+        Path uploadPath = Paths.get(uploadDir);
+        Path filePath = uploadPath.resolve(uniqueFileName);
 
-        File directory = new File(UPLOAD_DIR);
+        // File directory = new File(UPLOAD_DIR);
+        // if (!directory.exists()) directory.mkdirs();
+        File directory = uploadPath.toFile();
         if (!directory.exists()) directory.mkdirs();
 
         // Writing
-        file.transferTo(new File(fullPath));
+        // file.transferTo(new File(fullPath));
+        file.transferTo(filePath.toFile());
 
         // Saving in the database the metadata of the attachment
         RfcAttachment att = new RfcAttachment();
         att.setRfc(rfc);
         att.setFileName(originalFileName);
-        att.setFilePath(fullPath);
+        // att.setFilePath(fullPath);
+        att.setFilePath(filePath.toAbsolutePath().toString());
         att.setContentType(file.getContentType());
         att.setSize(file.getSize());
 
@@ -440,7 +452,8 @@ public class RfcService {
         Alternative saved = alternativeRepository.save(alternative);
         // Update RFC updated timestamp to reflect new alternative
         rfc.setUpdatedAt(java.time.Instant.now());
-        rfcRepository.save(rfc);
+        RFC savedRfc = rfcRepository.save(rfc);
+        ingestionService.ingestRFC(savedRfc);
 
         List<Long> subscribers = rfc.getObservers().stream()
                 .map(observer -> observer.getUser().getId())
@@ -511,7 +524,8 @@ public class RfcService {
 
             rfc.setStatus(RFC.Status.CLOSED_DECIDED);
             // Link winning alternative
-            // rfc.setWinningAlternative(winningAlt); maybe cool to have?
+            winningAlt.setIsWinning(true);
+            alternativeRepository.save(winningAlt);
 
             ADR adr = adrRepository.findByRfcId(rfcId)
                     .orElseThrow(() -> new RfcNotFoundException("ADR not found for this RFC"));
@@ -525,6 +539,7 @@ public class RfcService {
         }
 
         RFC saved = rfcRepository.save(rfc);
+        ingestionService.ingestRFC(saved);
 
          List<Long> subscribers = rfc.getObservers().stream()
                 .map(observer -> observer.getUser().getId())
@@ -691,6 +706,7 @@ public class RfcService {
             throw new IllegalArgumentException("No files provided");
         }
 
+        /*
         File directory = new File(UPLOAD_DIR);
         if (!directory.exists()) {
             directory.mkdirs();
@@ -699,6 +715,14 @@ public class RfcService {
         List<RfcAttachment> savedAttachments = new java.util.ArrayList<>();
 
         for (MultipartFile file : files) {
+            RfcAttachment saved = saveAttachmentInternal(rfc, file);
+            savedAttachments.add(saved);
+        } */
+
+        List<RfcAttachment> savedAttachments = new java.util.ArrayList<>();
+
+        for (MultipartFile file : files) {
+            // Questo metodo ora è autosufficiente: crea cartella e salva
             RfcAttachment saved = saveAttachmentInternal(rfc, file);
             savedAttachments.add(saved);
         }
@@ -717,7 +741,6 @@ public class RfcService {
         return rfcAttachmentRepository.findByRfcId(rfcId);
     }
 
-    // DTO interno per passare i dati al Controller in modo pulito
     public record FileDownloadDTO(Resource resource, String fileName, String contentType) {}
 
     @Transactional(readOnly = true)
@@ -774,7 +797,8 @@ public class RfcService {
             rfc.setAddition(request.addition().trim());
         }
 
-        rfcRepository.save(rfc);
+        RFC saved = rfcRepository.save(rfc);
+        ingestionService.ingestRFC(saved);
 
         return getRfcByIdForOrg(rfcId, orgId, userId);
     }
@@ -811,7 +835,8 @@ public class RfcService {
 
         Alternative saved = alternativeRepository.save(alternative);
         rfc.setUpdatedAt(java.time.Instant.now());
-        rfcRepository.save(rfc);
+        RFC savedRfc = rfcRepository.save(rfc);
+        ingestionService.ingestRFC(savedRfc);
 
         // Handle Files
         if (files != null && !files.isEmpty()) {
@@ -887,12 +912,20 @@ public class RfcService {
             throw new RfcAlternativeNotAllowedException("Only the author can upload files");
         }
 
+        /*
         // Create folder if needed
         File directory = new File(UPLOAD_DIR);
         if (!directory.exists()) directory.mkdirs();
 
         List<AlternativeAttachment> savedAttachments = new java.util.ArrayList<>();
         for (MultipartFile file : files) {
+            savedAttachments.add(saveAlternativeAttachmentInternal(alt, file));
+        }
+        return savedAttachments; */
+
+        List<AlternativeAttachment> savedAttachments = new java.util.ArrayList<>();
+        for (MultipartFile file : files) {
+            // Qui chiami il metodo specifico per le alternative
             savedAttachments.add(saveAlternativeAttachmentInternal(alt, file));
         }
         return savedAttachments;
@@ -926,17 +959,23 @@ public class RfcService {
         if (originalFileName.contains("..")) throw new IOException("Invalid filename");
 
         String uniqueFileName = System.currentTimeMillis() + "_ALT_" + originalFileName;
-        String fullPath = UPLOAD_DIR + uniqueFileName;
+        // String fullPath = UPLOAD_DIR + uniqueFileName;
+        Path uploadPath = Paths.get(uploadDir);
+        Path filePath = uploadPath.resolve(uniqueFileName);
 
-        File directory = new File(UPLOAD_DIR);
+        // File directory = new File(UPLOAD_DIR);
+        // if (!directory.exists()) directory.mkdirs();
+        File directory = uploadPath.toFile();
         if (!directory.exists()) directory.mkdirs();
 
-        file.transferTo(new File(fullPath));
+        // file.transferTo(new File(fullPath));
+        file.transferTo(filePath.toFile());
 
         AlternativeAttachment att = new AlternativeAttachment();
         att.setAlternative(alt);
         att.setFileName(originalFileName);
-        att.setFilePath(fullPath);
+        // att.setFilePath(fullPath);
+        att.setFilePath(filePath.toAbsolutePath().toString());
         att.setContentType(file.getContentType());
         att.setSize(file.getSize());
 
@@ -979,7 +1018,8 @@ public class RfcService {
         alternativeRepository.save(alt);
 
         rfc.setUpdatedAt(java.time.Instant.now());
-        rfcRepository.save(rfc);
+        RFC savedRfc = rfcRepository.save(rfc);
+        ingestionService.ingestRFC(savedRfc);
 
         return getAlternativeByIdForOrg(altId, rfc.getOrg().getId(), userId);
     }

@@ -15,7 +15,6 @@ public interface SearchRepository extends JpaRepository<RFC, Long> {
 
     @Query(value = """
         SELECT * FROM (
-            -- 1. SEARCHING IN ADRs
             SELECT 
                 a.id, 
                 a.title, 
@@ -23,46 +22,53 @@ public interface SearchRepository extends JpaRepository<RFC, Long> {
                 CONCAT(u.firstname, ' ', u.lastname) AS authorName, 
                 a.created_at AS date, 
                 'ADR' AS type, 
-                MATCH(a.title, a.context, a.decision) AGAINST(:query IN BOOLEAN MODE) AS score
+                ts_rank(
+                    to_tsvector('english', CONCAT(a.title, ' ', a.context, ' ', a.decision)), 
+                    to_tsquery('english', CAST(:query AS text))
+                ) AS score
             FROM adrs a
-            JOIN rfc r ON a.rfc_id = r.id      -- Join con RFC per ottenere org_id e user
+            JOIN rfc r ON a.rfc_id = r.id      
             JOIN app_users u ON r.user_id = u.id
             WHERE 
-                MATCH(a.title, a.context, a.decision) AGAINST(:query IN BOOLEAN MODE)
+                to_tsvector('english', CONCAT(a.title, ' ', a.context, ' ', a.decision)) 
+                @@ to_tsquery('english', CAST(:query AS text))
                 
-                AND r.org_id = :orgId
+                AND r.org_id = CAST(:orgId AS bigint)
                 
-                AND (:authorId IS NULL OR r.user_id = :authorId)
-                AND (:dateFrom IS NULL OR a.created_at >= :dateFrom)
-                AND (:dateTo IS NULL OR a.created_at <= :dateTo)
+                AND (CAST(:authorId AS bigint) IS NULL OR r.user_id = CAST(:authorId AS bigint))
+                AND (CAST(:dateFrom AS timestamp) IS NULL OR a.created_at >= CAST(:dateFrom AS timestamp))
+                AND (CAST(:dateTo AS timestamp) IS NULL OR a.created_at <= CAST(:dateTo AS timestamp))
 
             UNION ALL
 
-            -- 2. SEARCHING IN RFCs
             SELECT 
                 r.id, 
                 r.title, 
                 LEFT(r.description, 200) AS snippet, 
                 CONCAT(u.firstname, ' ', u.lastname) AS authorName, 
                 r.created_at AS date, 
-                'RFC' AS type, 
-                MATCH(r.title, r.description) AGAINST(:query IN BOOLEAN MODE) AS score
+                'RFC' AS type,
+                ts_rank(
+                    to_tsvector('english', CONCAT(r.title, ' ', r.description)), 
+                    to_tsquery('english', CAST(:query AS text))
+                ) AS score
             FROM rfc r
             JOIN app_users u ON r.user_id = u.id
             WHERE 
-                MATCH(r.title, r.description) AGAINST(:query IN BOOLEAN MODE)
+                to_tsvector('english', CONCAT(r.title, ' ', r.description)) 
+                @@ to_tsquery('english', CAST(:query AS text))
                 
-                AND r.org_id = :orgId
+                AND r.org_id = CAST(:orgId AS bigint)
                 
-                AND (:authorId IS NULL OR r.user_id = :authorId)
-                AND (:dateFrom IS NULL OR r.created_at >= :dateFrom)
-                AND (:dateTo IS NULL OR r.created_at <= :dateTo)
+                AND (CAST(:authorId AS bigint) IS NULL OR r.user_id = CAST(:authorId AS bigint))
+                AND (CAST(:dateFrom AS timestamp) IS NULL OR r.created_at >= CAST(:dateFrom AS timestamp))
+                AND (CAST(:dateTo AS timestamp) IS NULL OR r.created_at <= CAST(:dateTo AS timestamp))
         ) AS combined
         
         ORDER BY 
-            CASE WHEN :sort = 'date_desc' THEN date END DESC,
-            CASE WHEN :sort = 'date_asc'  THEN date END ASC,
-            CASE WHEN :sort = 'relevance' THEN score END DESC
+            CASE WHEN CAST(:sort AS text) = 'date_desc' THEN date END DESC,
+            CASE WHEN CAST(:sort AS text) = 'date_asc'  THEN date END ASC,
+            CASE WHEN CAST(:sort AS text) = 'relevance' THEN score END DESC
         LIMIT 50
     """, nativeQuery = true)
     List<SearchResultProjection> searchSimple(
