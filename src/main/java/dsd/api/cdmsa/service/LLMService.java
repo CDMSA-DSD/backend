@@ -110,7 +110,7 @@ public class LLMService {
         2. Do NOT include markdown code blocks, backticks, or any formatting
         3. Do NOT include any text before or after the JSON
         4. The JSON must have exactly these three fields: "context", "decision", "consequences"
-        5. All three fields MUST contain substantial content (minimum 50 words each)
+        5. All three fields MUST contain a maximum 2 sentences each. Be concise. This is a HARD REQUIREMENT.
         
         CONTENT REQUIREMENTS:
         
@@ -136,6 +136,8 @@ public class LLMService {
         {"context":"your detailed context here","decision":"your detailed decision here","consequences":"your detailed consequences here"}
         
         Remember: Output ONLY the JSON object, nothing else. No explanations, no markdown, no code blocks.
+        IT IS ABSOLUTELY CRITICAL that if information is missing, or contains information unrelated to software (i.e. "asdasd", gibberish, or the sort), you must return a message on all fields that there is insufficient information to generate the ADR.
+        You must not make up any information and you must not generate an ADR if the RFC or alternative lacks sufficient detail.
         """,
                 rfc.getTitle(),
                 rfc.getDescription() != null ? rfc.getDescription() : "N/A",

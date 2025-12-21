@@ -39,6 +39,9 @@ public class Alternative {
     @Column(length = 2000)
     private String cons;
 
+    @Column(name = "is_winning", nullable = false)
+    private Boolean isWinning = false; // Default a false
+
     @Lob
     @Column(columnDefinition = "TEXT")
     private String xml;
