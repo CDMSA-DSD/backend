@@ -41,26 +41,25 @@ public class AuthController {
     }
 
     @PostMapping("/register-invitation")
-    ResponseEntity<Void> register(@Valid @RequestBody SignInRequest newUser, @RequestParam String token) {
+    ResponseEntity<LoginResponse> register(@Valid @RequestBody SignInRequest newUser, @RequestParam String token) {
         // Store user
-        User user = userService.createUserByInvitation(newUser, token); //add link invitation
+        LoginResponse user = userService.createUserByInvitation(newUser, token); //add link invitation
         // Return answer
-        return ResponseEntity.created(linkTo(methodOn(UserController.class).getUser(user.getId())).toUri()).build();
+        return ResponseEntity.ok(user);
     }
 
     @PostMapping("/login")
-    public LoginResponse login(@RequestBody LoginRequest user) {
-        return  userService.login(user);
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest user) {
+        return  ResponseEntity.ok(userService.login(user));
     }
 
     @PostMapping("/oauth2/microsoft")
-    public LoginResponse microsoftSignIn(@RequestBody MSSignInRequest code){
+    public ResponseEntity<LoginResponse> microsoftSignIn(@RequestBody MSSignInRequest code){
         if (code.token() == null || code.token().isBlank()) {
-            return userService.loginWithMS(code);
+            return ResponseEntity.ok(userService.loginWithMS(code));
         } else {
-            userService.createUserByMS(code);
-            return null;
-            
+            LoginResponse user = userService.createUserByMS(code);
+            return ResponseEntity.ok(user);            
         }
     }
 }

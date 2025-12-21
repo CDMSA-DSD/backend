@@ -46,7 +46,7 @@ public class UserService {
         if (!existUser(user.getEmail())) {
             if (!user.getPassword().equals("OAUTH")) {
                 // Hash the password
-                user.setPassword(encoder.encode(user.getPassword()));    
+                user.setPassword(encoder.encode(user.getPassword()));
             }
             // Store user
             return repository.save(user);
@@ -55,7 +55,17 @@ public class UserService {
         throw new UserExistsException(user.getFirstname() + " " + user.getLastname());
     }
 
-    public User createUserByInvitation(SignInRequest registration, String token) {
+    private LoginResponse toLoginResponse(User user) {
+        String token = jwtService.generateToken(user);
+        boolean isAdmin = isOrgAdmin(user);
+        List<ContextByAdminResponse> contextsIsAdmin = contextService.findContextByAdmin(user);
+
+        UserResponse dto = UserResponse.fromEntity(user);
+
+        return new LoginResponse(dto, token, isAdmin, contextsIsAdmin);
+    }
+
+    public LoginResponse createUserByInvitation(SignInRequest registration, String token) {
 
         OrganizationInvitation invitation = invitationService.getInvitationByToken(token); // retrive invitation with
                                                                                            // that token
@@ -69,7 +79,7 @@ public class UserService {
         user.setOrg(invitation.getOrg());
         user.setProviderUserId(registration.providerId());
 
-        return createUser(user);
+        return toLoginResponse(createUser(user));
     }
 
     public LoginResponse login(LoginRequest login) {
@@ -155,7 +165,7 @@ public class UserService {
         return repository.save(user);
     }
 
-    public User createUserByMS(MSSignInRequest request) {
+    public LoginResponse createUserByMS(MSSignInRequest request) {
         UserInfo userInfo = msAuthService.extractUserInfo(request.code());
         SignInRequest signIn = new SignInRequest(userInfo.email(),
                 userInfo.firstname(),
