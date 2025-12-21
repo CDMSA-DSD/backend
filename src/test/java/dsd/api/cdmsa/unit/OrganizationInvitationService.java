@@ -112,11 +112,13 @@ class OrganizationInvitationServiceTest {
     void getInvitationByToken_shouldReturnInvitation_whenTokenValidAndNotExpired() {
         OrganizationInvitation inv = new OrganizationInvitation();
         inv.setToken("abcd");
-        inv.setExpiresAt(Instant.now().plus(1, ChronoUnit.DAYS));  // NOT expired
+        inv.setExpiresAt(Instant.now().plus(1, ChronoUnit.DAYS));
+
+        inv.setState(OrganizationInvitation.State.ACTIVE);
 
         when(invitationRepository.findByToken("abcd")).thenReturn(Optional.of(inv));
 
-        OrganizationInvitation result = invitationService.getInvitationByToken("abcde");
+        OrganizationInvitation result = invitationService.getInvitationByToken("abcd");
 
         assertNotNull(result);
         verify(invitationRepository).findByToken("abcd");

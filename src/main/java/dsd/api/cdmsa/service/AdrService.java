@@ -7,6 +7,7 @@ import dsd.api.cdmsa.model.*;
 import dsd.api.cdmsa.exception.RfcAlternativeNotAllowedException;
 import dsd.api.cdmsa.exception.RfcInvalidStatusException;
 import dsd.api.cdmsa.repository.AdrRepository;
+import dsd.api.cdmsa.repository.AlternativeRepository;
 import dsd.api.cdmsa.repository.RfcRepository;
 import dsd.api.cdmsa.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -28,9 +29,11 @@ public class AdrService {
 
     private final AdrRepository adrRepository;
     private final RfcRepository rfcRepository;
+    private final AlternativeRepository alternativeRepository;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate;
+    private final IngestionService ingestionService;
 
     @Transactional
     public AdrResponse createAdr(Long userId, Long orgId, CreateAdrRequest request) {
@@ -46,6 +49,8 @@ public class AdrService {
         adr.setStatus(request.status());
         adr.setRfc(rfc);
         ADR saved = adrRepository.save(adr);
+        ingestionService.ingestADR(saved);
+
 
         /*
         String markdown = buildMarkdown(saved);
@@ -116,9 +121,7 @@ public class AdrService {
                                 r.getUser().getId(),
                                 r.getUser().getFirstname() + " " + r.getUser().getLastname(),
                                 "REVIEWER",
-                                // TODO: delete null and use the commented line
-                                // r.getUser().getJobTitle()
-                                null
+                                r.getUser().getJobTitle()
                         ))
                         .toList();
 
@@ -128,9 +131,7 @@ public class AdrService {
                                 o.getUser().getId(),
                                 o.getUser().getFirstname() + " " + o.getUser().getLastname(),
                                 "OBSERVER",
-                                // TODO: delete null and use the commented line
-                                // o.getUser().getJobTitle()
-                                null
+                                o.getUser().getJobTitle()
                         ))
                         .toList();
 
@@ -196,6 +197,7 @@ public class AdrService {
             adr.setDecision("Selected alternative: " + (alternative != null ? alternative.getTitle() : ""));
             adr.setConsequences("");
             return adrRepository.save(adr);
+            // didn't put the ingest thing because this method is probably not used (to check)
     }
 
     @Transactional
@@ -210,6 +212,7 @@ public class AdrService {
         adr.setStatus(request.status());
 
         ADR saved = adrRepository.save(adr);
+        ingestionService.ingestADR(saved);
 
         /*
         User user = userRepository.findById(userId)
@@ -264,6 +267,7 @@ public class AdrService {
         adr.setGitHubUrl(githubUrl);
         adr = adrRepository.save(adr);
 
+        ingestionService.ingestADR(adr);
 
         return new AdrResponse(
                 adr.getId(),
@@ -370,10 +374,21 @@ public class AdrService {
 
         rfc.setAdr(null);
 
-        rfcRepository.save(rfc);
+        // The winning alternative is no more winning
+        List<Alternative> alternatives = alternativeRepository.findByRfcId(rfc.getId());
+        for (Alternative alt : alternatives) {
+            if (Boolean.TRUE.equals(alt.getIsWinning())) {
+                alt.setIsWinning(false);
+                alternativeRepository.save(alt);
+            }
+        }
+
+        RFC savedRfc = rfcRepository.save(rfc);
+        ingestionService.ingestRFC(savedRfc);
 
         // Deleting the adr
         adrRepository.delete(adr);
+        ingestionService.deleteADR(adr.getId());
     }
 
     /*

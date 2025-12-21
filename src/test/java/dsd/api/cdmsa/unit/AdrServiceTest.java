@@ -7,11 +7,15 @@ import dsd.api.cdmsa.dto.AdrSpecificResponse;
 import dsd.api.cdmsa.dto.CreateAdrRequest;
 import dsd.api.cdmsa.dto.PublishAdrRequest;
 import dsd.api.cdmsa.dto.UpdateAdrRequest;
+import dsd.api.cdmsa.exception.RfcAlternativeNotAllowedException;
+import dsd.api.cdmsa.exception.RfcInvalidStatusException;
 import dsd.api.cdmsa.model.*;
 import dsd.api.cdmsa.repository.AdrRepository;
+import dsd.api.cdmsa.repository.AlternativeRepository;
 import dsd.api.cdmsa.repository.RfcRepository;
 import dsd.api.cdmsa.repository.UserRepository;
 import dsd.api.cdmsa.service.AdrService;
+import dsd.api.cdmsa.service.IngestionService;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -50,6 +54,9 @@ class AdrServiceTest {
     private RfcRepository rfcRepository;
 
     @Mock
+    private AlternativeRepository alternativeRepository;
+
+    @Mock
     private UserRepository userRepository;
 
     @Mock
@@ -60,6 +67,9 @@ class AdrServiceTest {
 
     @InjectMocks
     private AdrService adrService;
+
+    @Mock
+    private IngestionService ingestionService;
 
     private RFC mockRfc;
     private ADR mockAdr;
@@ -104,6 +114,7 @@ class AdrServiceTest {
         mockAlternative.setDescription("Gradual migration strategy.");
         mockAlternative.setPros("Low risk, incremental.");
         mockAlternative.setCons("Slow process.");
+        mockAlternative.setIsWinning(true);
         mockAlternative.setRfc(mockRfc);
 
         // Setup ADR (main fields)
@@ -153,6 +164,7 @@ class AdrServiceTest {
 
         verify(rfcRepository).findByIdAndOrgId(1L, 1L);
         verify(adrRepository).save(any(ADR.class));
+        verify(ingestionService).ingestADR(any(ADR.class));
     }
 
     @Test
@@ -177,6 +189,7 @@ class AdrServiceTest {
 
         verify(rfcRepository).findByIdAndOrgId(999L, 1L);
         verify(adrRepository, never()).save(any(ADR.class));
+        verify(ingestionService, never()).ingestADR(any());
     }
 
     @Test
@@ -444,6 +457,7 @@ class AdrServiceTest {
 
         verify(adrRepository).findByIdAndRfc_Org_Id(1L, 1L);
         verify(adrRepository).save(any(ADR.class));
+        verify(ingestionService).ingestADR(any(ADR.class));
     }
 
     @Test
@@ -467,6 +481,7 @@ class AdrServiceTest {
 
         verify(adrRepository).findByIdAndRfc_Org_Id(999L, 1L);
         verify(adrRepository, never()).save(any(ADR.class));
+        verify(ingestionService, never()).ingestADR(any());
     }
 
     @Test
@@ -569,6 +584,7 @@ class AdrServiceTest {
                 eq(String.class)
         );
         verify(adrRepository, times(1)).save(any(ADR.class));
+        verify(ingestionService).ingestADR(any(ADR.class));
     }
 
     @Test
@@ -654,6 +670,99 @@ class AdrServiceTest {
                 eq(String.class)
         );
         verify(adrRepository, never()).save(any(ADR.class));
+    }
+
+    @Test
+    @DisplayName("Should delete ADR successfully")
+    void shouldDeleteAdrSuccessfully() {
+        // Given
+        // The user is the author (1L == 1L)
+        // ADR is DRAFT and not published on GitHub
+        mockAdr.setStatus(ADR.Status.DRAFT);
+        mockAdr.setGitHubUrl(null);
+
+        // Mocks for finding the ADR and the alternatives associated with the RFC
+        when(adrRepository.findByIdAndRfc_Org_Id(1L, 1L)).thenReturn(Optional.of(mockAdr));
+        when(alternativeRepository.findByRfcId(mockRfc.getId())).thenReturn(List.of(mockAlternative));
+        when(rfcRepository.save(any(RFC.class))).thenReturn(mockRfc);
+
+        // When
+        adrService.deleteAdr(1L, 1L, 1L);
+
+        // Then
+        // 1. Verify Winning Alternative was reset to false
+        verify(alternativeRepository).findByRfcId(mockRfc.getId());
+        verify(alternativeRepository).save(argThat(alt ->
+                alt.getId().equals(mockAlternative.getId()) && !alt.getIsWinning()
+        ));
+
+        // 2. Verify RFC Status Reset
+        verify(rfcRepository).save(argThat(rfc ->
+                rfc.getStatus() == RFC.Status.UNDER_REVIEW && rfc.getAdr() == null
+        ));
+        verify(ingestionService).ingestRFC(any(RFC.class));
+
+        // 3. Verify ADR Deletion
+        verify(adrRepository).delete(mockAdr);
+        verify(ingestionService).deleteADR(mockAdr.getId());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when deleting ADR if User is not Author")
+    void shouldThrowExceptionWhenDeletingAdrIfNotAuthor() {
+        // Given
+        when(adrRepository.findByIdAndRfc_Org_Id(1L, 1L)).thenReturn(Optional.of(mockAdr));
+
+        // When: Calling with userId 999L (not the author)
+        assertThatThrownBy(() -> adrService.deleteAdr(1L, 1L, 999L))
+                .isInstanceOf(RfcAlternativeNotAllowedException.class)
+                .hasMessageContaining("Only the author can delete this ADR");
+
+        // Then: verify no deletions occurred
+        verify(adrRepository, never()).delete(any());
+        verify(ingestionService, never()).deleteADR(anyLong());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when deleting ADR if Status is APPROVED")
+    void shouldThrowExceptionWhenDeletingAdrIfApproved() {
+        // Given
+        mockAdr.setStatus(ADR.Status.APPROVED);
+        when(adrRepository.findByIdAndRfc_Org_Id(1L, 1L)).thenReturn(Optional.of(mockAdr));
+
+        // When & Then
+        assertThatThrownBy(() -> adrService.deleteAdr(1L, 1L, 1L))
+                .isInstanceOf(RfcInvalidStatusException.class)
+                .hasMessageContaining("Cannot delete an ADR that has already been published/approved");
+
+        verify(adrRepository, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when deleting ADR if GitHub URL is present")
+    void shouldThrowExceptionWhenDeletingAdrIfPublished() {
+        // Given
+        mockAdr.setStatus(ADR.Status.DRAFT);
+        mockAdr.setGitHubUrl("https://github.com/something");
+        when(adrRepository.findByIdAndRfc_Org_Id(1L, 1L)).thenReturn(Optional.of(mockAdr));
+
+        // When & Then
+        assertThatThrownBy(() -> adrService.deleteAdr(1L, 1L, 1L))
+                .isInstanceOf(RfcInvalidStatusException.class)
+                .hasMessageContaining("Cannot delete an ADR that has already been published/approved");
+
+        verify(adrRepository, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when deleting non-existent ADR")
+    void shouldThrowExceptionWhenDeletingNonExistentAdr() {
+        // Given
+        when(adrRepository.findByIdAndRfc_Org_Id(999L, 1L)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> adrService.deleteAdr(999L, 1L, 1L))
+                .isInstanceOf(EntityNotFoundException.class);
     }
 
     // ==================== UTILITY TESTS ====================
