@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import dsd.api.cdmsa.dto.LoginRequest;
 import dsd.api.cdmsa.dto.LoginResponse;
+import dsd.api.cdmsa.dto.MSSignInRequest;
 import dsd.api.cdmsa.dto.OrgAdminRequest;
 import dsd.api.cdmsa.dto.OrgAdminResponse;
 import dsd.api.cdmsa.dto.SignInRequest;
@@ -50,5 +51,16 @@ public class AuthController {
     @PostMapping("/login")
     public LoginResponse login(@RequestBody LoginRequest user) {
         return  userService.login(user);
+    }
+
+    @PostMapping("/oauth2/microsoft")
+    public LoginResponse microsoftSignIn(@RequestBody MSSignInRequest code){
+        if (code.token() == null || code.token().isBlank()) {
+            return userService.loginWithMS(code);
+        } else {
+            userService.createUserByMS(code);
+            return null;
+            
+        }
     }
 }

@@ -19,7 +19,7 @@ import dsd.api.cdmsa.model.OrganizationInvitation;
 import dsd.api.cdmsa.model.User;
 import dsd.api.cdmsa.model.UserPrincipal;
 import dsd.api.cdmsa.repository.UserRepository;
-
+import dsd.api.cdmsa.security.authentication.OAuthCodeAuthenticationToken;
 import lombok.AllArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +30,7 @@ public class UserService {
     private final JWTService jwtService;
     private final OrganizationInvitationService invitationService;
     private final ContextService contextService;
+    private final MSAuthService msAuthService;
 
     private final AuthenticationManager authManager;
 
@@ -43,8 +44,10 @@ public class UserService {
     public User createUser(User user) {
         // Check if a user already exist
         if (!existUser(user.getEmail())) {
-            // Hash the password
-            user.setPassword(encoder.encode(user.getPassword()));
+            if (!user.getPassword().equals("OAUTH")) {
+                // Hash the password
+                user.setPassword(encoder.encode(user.getPassword()));    
+            }
             // Store user
             return repository.save(user);
         }
@@ -64,11 +67,17 @@ public class UserService {
         user.setEmail(registration.email());
         user.setPassword(registration.password()); // Hashed later in createUser
         user.setOrg(invitation.getOrg());
+        user.setProviderUserId(registration.providerId());
 
         return createUser(user);
     }
 
     public LoginResponse login(LoginRequest login) {
+
+        if (login.password().equals("OAUTH")) {
+            throw new InvalidParameterException();
+        }
+
         Authentication authentication = authManager
                 .authenticate(new UsernamePasswordAuthenticationToken(login.email(), login.password()));
 
@@ -82,20 +91,6 @@ public class UserService {
             UserResponse dto = UserResponse.fromEntity(user);
 
             return new LoginResponse(dto, token, isAdmin, contextsIsAdmin);
-
-        } else {
-            throw new InvalidParameterException();
-        }
-    }
-
-    public String verify(LoginRequest login) {
-        Authentication authentication = authManager
-                .authenticate(new UsernamePasswordAuthenticationToken(login.email(), login.password()));
-
-        if (authentication.isAuthenticated()) {
-            UserPrincipal authUser = (UserPrincipal) authentication.getPrincipal();
-            User user = authUser.getUser();
-            return jwtService.generateToken(user);
 
         } else {
             throw new InvalidParameterException();
@@ -160,4 +155,41 @@ public class UserService {
         return repository.save(user);
     }
 
+    public User createUserByMS(MSSignInRequest request) {
+        UserInfo userInfo = msAuthService.extractUserInfo(request.code());
+        SignInRequest signIn = new SignInRequest(userInfo.email(),
+                userInfo.firstname(),
+                userInfo.lastname(),
+                "OAUTH",
+                userInfo.providerId());
+
+        return createUserByInvitation(signIn, request.token());
+
+    }
+
+    public LoginResponse loginWithMS(MSSignInRequest request) {
+        Authentication authentication = authManager
+                .authenticate(new OAuthCodeAuthenticationToken(request.code(), "MS"));
+
+        if (authentication.isAuthenticated()) {
+            UserPrincipal authUser = (UserPrincipal) authentication.getPrincipal();
+            User user = authUser.getUser();
+            String token = jwtService.generateToken(user);
+            boolean isAdmin = isOrgAdmin(user);
+            List<ContextByAdminResponse> contextsIsAdmin = contextService.findContextByAdmin(user);
+
+            UserResponse dto = UserResponse.fromEntity(user);
+
+            return new LoginResponse(dto, token, isAdmin, contextsIsAdmin);
+
+        } else {
+            throw new InvalidParameterException();
+        }
+    }
+
+    public User findByEmailAndProviderUserId(String providerId, String email) {
+        User user = repository.findByEmailAndProviderUserId(email, providerId)
+                .orElseThrow(() -> new UserNotFoundException(email));
+        return user;
+    }
 }

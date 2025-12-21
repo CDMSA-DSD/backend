@@ -36,7 +36,7 @@ public class User {
     private String lastname;
 
     @NotBlank(message = "Password is mandatory")
-    @Column(nullable = false)
+    @Column
     private String password;
 
     @NotBlank(message = "Email is mandatory")
@@ -49,6 +49,12 @@ public class User {
 
     @Column(name = "job_title", nullable = false)
     private String jobTitle = "Developer";  // Developer as default
+
+    @Column
+    private String provider;
+
+    @Column
+    private String providerUserId;
 
     @OneToMany(mappedBy = "user")
     private List<RFC> rfcs = new ArrayList<>();
