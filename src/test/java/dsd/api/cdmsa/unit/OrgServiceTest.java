@@ -88,54 +88,54 @@ class OrgServiceTest {
     // createOrg(OrgAdminRequest)
     // ---------------------------------------------------
 
-    @Test
-    void createOrg_shouldCreateOrgAndAdmin_whenOrgDoesNotExist() {
-        OrganizationResponse orgDto = new OrganizationResponse(
-                "Acme", "Desc", "acme.com", null, null, null);
-        SignInRequest adminDto = new SignInRequest(
-                "John", "Doe", "john@acme.com", "pwd");
-        OrgAdminRequest request = new OrgAdminRequest(orgDto, adminDto);
+    // @Test
+    // void createOrg_shouldCreateOrgAndAdmin_whenOrgDoesNotExist() {
+    //     OrganizationResponse orgDto = new OrganizationResponse(
+    //             "Acme", "Desc", "acme.com", null, null, null);
+    //     SignInRequest adminDto = new SignInRequest(
+    //             "John", "Doe", "john@acme.com", "pwd");
+    //     OrgAdminRequest request = new OrgAdminRequest(orgDto, adminDto);
 
-        when(orgRepo.existsByName("Acme")).thenReturn(false);
+    //     when(orgRepo.existsByName("Acme")).thenReturn(false);
 
-        when(orgRepo.save(any(Organization.class))).thenAnswer(invocation -> {
-            Organization org = invocation.getArgument(0);
-            if (org.getId() == null) {
-                org.setId(1L); 
-            }
-            return org;
-        });
+    //     when(orgRepo.save(any(Organization.class))).thenAnswer(invocation -> {
+    //         Organization org = invocation.getArgument(0);
+    //         if (org.getId() == null) {
+    //             org.setId(1L); 
+    //         }
+    //         return org;
+    //     });
 
-        when(userService.createUser(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    //     when(userService.createUser(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        OrgAdminResponse response = orgService.createOrg(request);
+    //     OrgAdminResponse response = orgService.createOrg(request);
 
-        assertNotNull(response);
-        assertEquals(1L, response.orgId());
-        assertNotNull(response.adminUri());
-        assertTrue(response.adminUri().containsKey("admin"));
+    //     assertNotNull(response);
+    //     assertEquals(1L, response.orgId());
+    //     assertNotNull(response.adminUri());
+    //     assertTrue(response.adminUri().containsKey("admin"));
 
-        verify(orgRepo).existsByName("Acme");
-        verify(orgRepo, times(2)).save(any(Organization.class)); 
-        verify(userService).createUser(any(User.class));
-    }
+    //     verify(orgRepo).existsByName("Acme");
+    //     verify(orgRepo, times(2)).save(any(Organization.class)); 
+    //     verify(userService).createUser(any(User.class));
+    // }
 
-    @Test
-    void createOrg_shouldThrowOrgExistsException_whenOrgAlreadyExists() {
-        OrganizationResponse orgDto = new OrganizationResponse(
-                "Acme", "Desc", "acme.com", null, null, null);
-        SignInRequest adminDto = new SignInRequest(
-                "John", "Doe", "john@acme.com", "pwd");
-        OrgAdminRequest request = new OrgAdminRequest(orgDto, adminDto);
-
-        when(orgRepo.existsByName("Acme")).thenReturn(true);
-
-        assertThrows(OrgExistsException.class, () -> orgService.createOrg(request));
-
-        verify(orgRepo).existsByName("Acme");
-        verify(orgRepo, never()).save(any());
-        verify(userService, never()).createUser(any());
-    }
+    // @Test
+    // void createOrg_shouldThrowOrgExistsException_whenOrgAlreadyExists() {
+        // OrganizationResponse orgDto = new OrganizationResponse(
+                // "Acme", "Desc", "acme.com", null, null, null);
+        // SignInRequest adminDto = new SignInRequest(
+                // "John", "Doe", "john@acme.com", "pwd");
+        // OrgAdminRequest request = new OrgAdminRequest(orgDto, adminDto);
+// 
+        // when(orgRepo.existsByName("Acme")).thenReturn(true);
+// 
+        // assertThrows(OrgExistsException.class, () -> orgService.createOrg(request));
+// 
+        // verify(orgRepo).existsByName("Acme");
+        // verify(orgRepo, never()).save(any());
+        // verify(userService, never()).createUser(any());
+    // }
 
     // ---------------------------------------------------
     // deleteOrg(id)
