@@ -17,8 +17,8 @@ spring:
 
     azure:
       openai:
-        api-key: "azure key"
-        endpoint: "azure endpoint"
+        api-key: "AOsntraW4FVL35jPwyVjduMrg4XdRXUWHQvXHeXQAJaEx5FgGU6IJQQJ99BLACfhMk5XJ3w3AAABACOG2tW2"
+        endpoint: "https://cdmsadsd.openai.azure.com/" 
         embedding:
           options:
             deployment-name: text-embedding-3-small
