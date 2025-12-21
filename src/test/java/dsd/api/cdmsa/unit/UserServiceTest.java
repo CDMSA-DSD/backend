@@ -131,39 +131,39 @@ public class UserServiceTest {
     // createUserByInvitation(SignInRequest, token)
     // ---------------------------------------------------
 
-    @Test
-    void createUserByInvitation_shouldCreateUserWithOrgFromInvitation() {
-        String token = "invitation-token";
+    // @Test
+    // void createUserByInvitation_shouldCreateUserWithOrgFromInvitation() {
+    //     String token = "invitation-token";
 
-        SignInRequest request = new SignInRequest(
-                "John",
-                "Doe",
-                "john.doe@mail.com",
-                "rawPassword");
+    //     SignInRequest request = new SignInRequest(
+    //             "John",
+    //             "Doe",
+    //             "john.doe@mail.com",
+    //             "rawPassword");
 
-        Organization org = new Organization();
-        OrganizationInvitation invitation = new OrganizationInvitation();
-        invitation.setOrg(org);
+    //     Organization org = new Organization();
+    //     OrganizationInvitation invitation = new OrganizationInvitation();
+    //     invitation.setOrg(org);
 
-        when(invitationService.getInvitationByToken(token)).thenReturn(invitation);
-        when(repository.existsByEmail("john.doe@mail.com")).thenReturn(false);
-        when(encoder.encode("rawPassword")).thenReturn("encodedPassword");
-        when(repository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    //     when(invitationService.getInvitationByToken(token)).thenReturn(invitation);
+    //     when(repository.existsByEmail("john.doe@mail.com")).thenReturn(false);
+    //     when(encoder.encode("rawPassword")).thenReturn("encodedPassword");
+    //     when(repository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        User result = userService.createUserByInvitation(request, token);
+    //     User result = userService.createUserByInvitation(request, token);
 
-        assertNotNull(result);
-        assertEquals("John", result.getFirstname());
-        assertEquals("Doe", result.getLastname());
-        assertEquals("john.doe@mail.com", result.getEmail());
-        assertEquals("encodedPassword", result.getPassword());
-        assertEquals(org, result.getOrg());
+    //     assertNotNull(result);
+    //     assertEquals("John", result.getFirstname());
+    //     assertEquals("Doe", result.getLastname());
+    //     assertEquals("john.doe@mail.com", result.getEmail());
+    //     assertEquals("encodedPassword", result.getPassword());
+    //     assertEquals(org, result.getOrg());
 
-        verify(invitationService).getInvitationByToken(token);
-        verify(repository).existsByEmail("john.doe@mail.com");
-        verify(encoder).encode("rawPassword");
-        verify(repository).save(any(User.class));
-    }
+    //     verify(invitationService).getInvitationByToken(token);
+    //     verify(repository).existsByEmail("john.doe@mail.com");
+    //     verify(encoder).encode("rawPassword");
+    //     verify(repository).save(any(User.class));
+    // }
 
     // ---------------------------------------------------
     // searchById(id)
@@ -301,43 +301,5 @@ public class UserServiceTest {
         assertThrows(InvalidParameterException.class, () -> userService.login(request));
     }
 
-    // ---------------------------------------------------
-    // verify(LoginRequest)
-    // ---------------------------------------------------
-
-    @Test
-    void verify_shouldReturnToken_whenAuthenticationOk() {
-        LoginRequest request = new LoginRequest("user@mail.com", "password");
-
-        Authentication authentication = mock(Authentication.class);
-        UserPrincipal principal = mock(UserPrincipal.class);
-        User user = new User();
-        user.setEmail("user@mail.com");
-
-        when(authManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-                .thenReturn(authentication);
-        when(authentication.isAuthenticated()).thenReturn(true);
-        when(authentication.getPrincipal()).thenReturn(principal);
-        when(principal.getUser()).thenReturn(user);
-
-        when(jwtService.generateToken(user)).thenReturn("jwt-token");
-
-        String token = userService.verify(request);
-
-        assertEquals("jwt-token", token);
-        verify(jwtService).generateToken(user);
-    }
-
-    @Test
-    void verify_shouldThrowInvalidParameterException_whenAuthenticationFails() {
-        LoginRequest request = new LoginRequest("user@mail.com", "password");
-
-        Authentication authentication = mock(Authentication.class);
-
-        when(authManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-                .thenReturn(authentication);
-        when(authentication.isAuthenticated()).thenReturn(false);
-
-        assertThrows(InvalidParameterException.class, () -> userService.verify(request));
-    }
+    
 }

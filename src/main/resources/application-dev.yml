@@ -1,21 +1,27 @@
 spring:
   datasource:
-    url: jdbc:mariadb://localhost:3306/cdmsa
+    # URL cambiato per PostgreSQL
+    url: jdbc:postgresql://localhost:5432/cdmsa
     username: cdmsa
     password: cdmsa
+    # Driver cambiato
+    driver-class-name: org.postgresql.Driver
+
   jpa:
     hibernate:
-      ddl-auto: update  
+      ddl-auto: update
     properties:
       hibernate:
-        format_sql: true 
-  security.debug: true      
+        # Dialetto cambiato per PostgreSQL
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
 
+  security:
+    debug: true
 
 logging:
   level:
     org.springframework.security: TRACE
-  
 
 jwt:
   secret: xH2t9RjAff+7OQzAPDBtUxkcoZ1FGMfAcJj5851gX+cjiC5vudFwyoLuhMkj4iO1mXFET/w2akpTnX2vrZtS9g==
@@ -24,34 +30,43 @@ jwt:
 app:
   frontend:
     base-url: http://localhost:3000
+  
+microsoft:
+  oauth:
+    client-id: "2d32d2ec-e701-4731-88ea-fd409c401198"  
+    client-secret: "yCP8Q~HP6txWsOz73y7wyFtU-9-YOukGmlTY6dcy"  
+    redirect-uri: "http://localhost:3000/auth/microsoft"  
+    scope: "openid profile email"  
+    issuer-uri: "https://login.microsoftonline.com/9188040d-6c67-4c5b-b112-36a304b66dad/v2.0"
+    token-url: "https://login.microsoftonline.com/common/oauth2/v2.0/token"
 
-    
 
-# --------------------- CHATGPT RECOMMENDATIONS FOR THIS FILE -----------------------------------
 
-# server:
-  #port: 8080
+      # --------------------- CHATGPT RECOMMENDATIONS FOR THIS FILE -----------------------------------
 
-#spring:
- ## datasource:
-  #  url: jdbc:mariadb://localhost:3306/cdmsa?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=UTC
-    #username: cdmsa
-   # password: cdmsa
- # jpa:
-  #  open-in-view: false
-   # hibernate:
-    #  ddl-auto: update            
-    #properties:
-     # hibernate:
+      # server:
+      #port: 8080
+
+      #spring:
+      ## datasource:
+      #  url: jdbc:mariadb://localhost:3306/cdmsa?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=UTC
+      #username: cdmsa
+      # password: cdmsa
+      # jpa:
+      #  open-in-view: false
+      # hibernate:
+      #  ddl-auto: update
+      #properties:
+      # hibernate:
       #  dialect: org.hibernate.dialect.MariaDBDialect
-       # format_sql: true
-  #jackson:
-   # serialization:
+    # format_sql: true
+    #jackson:
+    # serialization:
     #  WRITE_DATES_AS_TIMESTAMPS: false   # ISO-8601 en JSON
 
-#logging:
-#  level:
- #   org.hibernate.SQL: debug         # ver las queries en dev
-  #  org.hibernate.type: warn
+    #logging:
+    #  level:
+    #   org.hibernate.SQL: debug         # ver las queries en dev
+    #  org.hibernate.type: warn
 
     

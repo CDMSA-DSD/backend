@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -19,6 +20,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import dsd.api.cdmsa.security.authentication.OAuthCodeAuthenticationProvider;
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -115,9 +117,14 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        // Provides access to the configured AuthenticationManager
-        return config.getAuthenticationManager();
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration config,
+            AuthenticationProvider authenticationProvider,
+            OAuthCodeAuthenticationProvider oauthProvider) throws Exception {
 
+        return new ProviderManager(
+                authenticationProvider, // DaoAuthenticationProvider
+                oauthProvider // OAuthCodeAuthenticationProvider
+        );
     }
 }

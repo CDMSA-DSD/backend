@@ -18,4 +18,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Page<User> findByOrgId(Long orgId, Pageable pageable);
 
     List<User> findByIdInAndOrgId(List<Long> ids, Long orgId);
+
+    Optional<User> findByEmailAndProviderUserId(String email, String providerUserId);
 }
