@@ -129,6 +129,10 @@ public class OrgService {
                                 .orElseThrow(() -> new RuntimeException("User not found"));
                 Organization org = user.getOrg();
 
+                if (!org.getAdminUser().getId().equals(user.getId())) {
+                        throw new RuntimeException("Only admin can update organization details");
+                }
+
                 org.setName(request.companyName().trim());
                 org.setDescription(request.description().trim());
                 org.setDomain(request.domain().trim());
@@ -151,6 +155,10 @@ public class OrgService {
                 User user = userRepo.findById(userId)
                                 .orElseThrow(() -> new RuntimeException("User not found"));
                 Organization org = user.getOrg();
+
+                if (!org.getAdminUser().getId().equals(user.getId())) {
+                        throw new RuntimeException("Only admin can connect GitHub");
+                }
 
                 String pat = request.pat().trim();
 
@@ -241,6 +249,10 @@ public class OrgService {
                 User user = userRepo.findById(userId)
                                 .orElseThrow(() -> new RuntimeException("User not found"));
                 Organization org = user.getOrg();
+
+                if (!org.getAdminUser().getId().equals(user.getId())) {
+                        throw new RuntimeException("Only admin can set repo and branch");
+                }
 
                 org.setSelectedRepoName(request.repoName().trim());
                 org.setSelectedBranchName(request.branchName().trim());
