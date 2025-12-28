@@ -21,6 +21,7 @@ public record RfcSpecificResponse(
         String xml,
         boolean isAuthor,
         boolean isWatching,
+        boolean isReviewer,
         List<EntityModel<UserSummaryResponse>> userReviewers,
         List<EntityModel<ContextSummaryResponse>> contextReviewers,
         List<AlternativeResponse> alternatives,

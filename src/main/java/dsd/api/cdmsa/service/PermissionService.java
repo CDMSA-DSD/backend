@@ -2,7 +2,10 @@ package dsd.api.cdmsa.service;
 
 import org.springframework.stereotype.Service;
 
+import dsd.api.cdmsa.model.Alternative;
 import dsd.api.cdmsa.model.UserPrincipal;
+import dsd.api.cdmsa.repository.AlternativeRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -12,6 +15,7 @@ public class PermissionService {
     private final UserService userService;
     private final ContextService contextService;
     private final RfcService rfcService;
+    private final AlternativeRepository alternativeRepository;
 
     // === ORG PERMISSIONS ===
 
@@ -36,6 +40,16 @@ public class PermissionService {
     public boolean canReviewRfc(UserPrincipal principal, Long rfcId) {
         return rfcService.isReviewer(principal.getUser(),rfcId) ||
                 canManageRfc(principal,rfcId);
+    }
+
+    // == VOTER PERMISSION ===
+    public boolean canVoteRfc(UserPrincipal principal, Long altId) {
+        Alternative alternative = alternativeRepository.findById(altId)
+                .orElseThrow(() -> new EntityNotFoundException("Alternative not found"));
+        
+        Long rfcId = alternative.getRfc().getId();
+
+        return canReviewRfc(principal, rfcId);
     }
 
 }
