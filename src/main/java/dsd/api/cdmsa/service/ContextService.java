@@ -429,15 +429,15 @@ public class ContextService {
     @Transactional(readOnly = true)
     public List<ContextMemberResponse> listMembers(Long actingUserId, Long contextId) {
 
-        User actingUser = getCurrentUserOrThrow(actingUserId);
+        // User actingUser = getCurrentUserOrThrow(actingUserId);
         Context context = contextRepository.findById(contextId)
                 .orElseThrow(() -> new ContextNotFoundException("Context not found"));
 
-        // only org admins or context admins can list members
-        if (!isContextAdmin(actingUser, context.getId())) {
-            throw new ContextForbiddenException(
-                    "Only organization admins or context admins can view context members");
-        }
+        // // only org admins or context admins can list members
+        // if (!isContextAdmin(actingUser, context.getId())) {
+        //     throw new ContextForbiddenException(
+        //             "Only organization admins or context admins can view context members");
+        // }
 
         return membershipRepository.findByContextId(contextId)
                 .stream()

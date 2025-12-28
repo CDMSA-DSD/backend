@@ -1,5 +1,7 @@
 package dsd.api.cdmsa.controller;
 
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.web.PagedResourcesAssembler;
 import dsd.api.cdmsa.dto.UpdateUserProfileRequest;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import dsd.api.cdmsa.assembler.NotificationResponseModelAssembler;
 import dsd.api.cdmsa.assembler.OrgModelAssembler;
 import dsd.api.cdmsa.assembler.UserResponseModelAssembler;
+import dsd.api.cdmsa.dto.ContextByAdminResponse;
 import dsd.api.cdmsa.dto.NotificationResponse;
 import dsd.api.cdmsa.dto.NotificationStatusResponse;
 import dsd.api.cdmsa.dto.OrganizationResponseAlt;
@@ -22,6 +25,7 @@ import dsd.api.cdmsa.model.Notification;
 import dsd.api.cdmsa.model.Organization;
 import dsd.api.cdmsa.model.User;
 import dsd.api.cdmsa.model.UserPrincipal;
+import dsd.api.cdmsa.service.ContextService;
 import dsd.api.cdmsa.service.NotificationService;
 import dsd.api.cdmsa.service.OrgService;
 import lombok.AllArgsConstructor;
@@ -35,6 +39,7 @@ public class MeController {
     private final OrgService orgService;
     private final NotificationService notiService;
     private final UserService userService;
+    private final ContextService contextService;
 
     private UserResponseModelAssembler userResponseModelAssembler;
     private OrgModelAssembler orgModelAssembler;
@@ -110,6 +115,17 @@ public class MeController {
         User response = userService.updateUserProfile(userId, request);
 
         return ResponseEntity.ok(userResponseModelAssembler.toModel(response));
+    }
+
+    // Get context IDs where the user is an admin
+    @GetMapping("/contexts/admin")
+    public ResponseEntity<List<ContextByAdminResponse>> getAdminContextIds(
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        User user = principal.getUser();
+        List<ContextByAdminResponse> contextIds = contextService.findContextByAdmin(user);
+        
+        return ResponseEntity.ok(contextIds);
     }
 
 }
