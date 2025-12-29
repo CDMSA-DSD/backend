@@ -12,6 +12,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import dsd.api.cdmsa.model.event.ReviewersAssignedEvent;
+import dsd.api.cdmsa.model.event.ReviewersRemovedEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -641,17 +643,23 @@ public class RfcService {
     @Transactional
     public void asignReviewersToRfc(ReviewersRequest reviewers, Long rfcId, Long orgId) {
 
-        List<Long> userIds = reviewers.userIds();
-        List<Long> contextIds = reviewers.contextIds();
+        List<Long> newUserIds = reviewers.userIds() != null ? reviewers.userIds() : List.of();
+        List<Long> newContextIds = reviewers.contextIds() != null ? reviewers.contextIds() : List.of();
         RFC rfc = getRfcById(rfcId);
+
+        Set<Long> existingUserIds = userReviewerRepository.findAllByRfcId(rfcId)
+                .stream().map(ur -> ur.getUser().getId()).collect(Collectors.toSet());
+
+        Set<Long> existingContextIds = contextReviewerRepository.findAllByRfcId(rfcId)
+                .stream().map(cr -> cr.getContext().getId()).collect(Collectors.toSet());
 
         // Remove existing reviewers
         userReviewerRepository.deleteByRfcId(rfcId);
         contextReviewerRepository.deleteByRfcId(rfcId);
 
         // Add new user reviewers
-        if (userIds != null && !userIds.isEmpty()) {
-            List<User> users = userService.findAllUsersByid(userIds, orgId);
+        if (!newUserIds.isEmpty()) {
+            List<User> users = userService.findAllUsersByid(newUserIds, orgId);
 
             List<UserReviewer> userReviewers = users.stream()
                     .map(user -> {
@@ -666,8 +674,8 @@ public class RfcService {
         }
 
         // Add new context reviewers
-        if (contextIds != null && !contextIds.isEmpty()) {
-            List<Context> contexts = contextService.findAllContextByid(contextIds);
+        if (!newContextIds.isEmpty()) {
+            List<Context> contexts = contextService.findAllContextByid(newContextIds);
 
             List<ContextReviewer> contextReviewers = contexts.stream()
                     .map(context -> {
@@ -679,6 +687,22 @@ public class RfcService {
                     .toList();
 
             contextReviewerRepository.saveAll(contextReviewers);
+        }
+
+        List<Long> addedUsers = newUserIds.stream().filter(id -> !existingUserIds.contains(id)).toList();
+        List<Long> addedContexts = newContextIds.stream().filter(id -> !existingContextIds.contains(id)).toList();
+
+        List<Long> removedUsers = existingUserIds.stream().filter(id -> !newUserIds.contains(id)).toList();
+        List<Long> removedContexts = existingContextIds.stream().filter(id -> !newContextIds.contains(id)).toList();
+
+        if (!addedUsers.isEmpty() || !addedContexts.isEmpty()) {
+            eventPublisher.publishEvent(new ReviewersAssignedEvent(
+                    orgId, rfcId, rfc.getTitle(), addedUsers, addedContexts, rfc.getUser().getEmail()));
+        }
+
+        if (!removedUsers.isEmpty() || !removedContexts.isEmpty()) {
+            eventPublisher.publishEvent(new ReviewersRemovedEvent(
+                    orgId, rfcId, rfc.getTitle(), removedUsers, removedContexts, rfc.getUser().getEmail()));
         }
 
     }

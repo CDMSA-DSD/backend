@@ -12,7 +12,7 @@ import dsd.api.cdmsa.model.UserReviewer;
 @Repository
 public interface UserReviewerRepository extends JpaRepository<UserReviewer, UserRFCId> {
     List<UserReviewer> findAllByRfc(RFC rfc);
-
+    List<UserReviewer> findAllByRfcId(Long rfcId);
     void deleteByRfcId(Long rfcId);
     
 }

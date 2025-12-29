@@ -116,53 +116,66 @@ class RfcServiceTest {
         Long userId = 1L;
         Long orgId = 10L;
         Long templateId = 5L;
+        List<Long> reviewerIds = List.of(2L);
 
-        // DTO Update: (title, description, templateId, xml) - NO addition
         CreateRfcRequest request = new CreateRfcRequest(
                 "  My RFC  ",
                 "Desc",
                 templateId,
                 null,
-                null,
-                null);
+                reviewerIds,
+                null
+        );
 
-        User author = new User(); author.setId(userId);
-        Organization org = new Organization(); org.setId(orgId);
-        Template template = new Template(); template.setId(templateId);
+        User author = new User();
+        author.setId(userId);
+        author.setEmail("author@test.com");
+
+        Organization org = new Organization();
+        org.setId(orgId);
+
+        Template template = new Template();
+        template.setId(templateId);
+
+        User reviewerUser = new User();
+        reviewerUser.setId(2L);
 
         RFC rfc = new RFC();
         rfc.setId(100L);
         rfc.setTitle("My RFC");
-        rfc.setDescription("Desc");
         rfc.setUser(author);
-        rfc.setTemplate(template);
         rfc.setOrg(org);
         rfc.setStatus(RFC.Status.UNDER_REVIEW);
 
-        // Mocks
         when(userRepository.findById(userId)).thenReturn(Optional.of(author));
         when(templateRepository.findById(templateId)).thenReturn(Optional.of(template));
         when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
+
         when(rfcRepository.save(any(RFC.class))).thenReturn(rfc);
         when(rfcRepository.findById(100L)).thenReturn(Optional.of(rfc));
 
-        when(userService.findAllUsersByid(anyList(), eq(orgId))).thenReturn(List.of(author));
-        
-        // Mocks per la costruzione della risposta (allegati e commenti)
+        when(userReviewerRepository.findAllByRfcId(100L)).thenReturn(Collections.emptyList());
+        when(contextReviewerRepository.findAllByRfcId(100L)).thenReturn(Collections.emptyList());
+
+        when(userService.findAllUsersByid(anyList(), eq(orgId))).thenReturn(List.of(reviewerUser));
+
         when(commentRepository.findByRfcId(rfc.getId())).thenReturn(Collections.emptyList());
         when(rfcAttachmentRepository.findByRfcId(rfc.getId())).thenReturn(Collections.emptyList());
 
-        // Esecuzione (passiamo null ai files per simulare assenza allegati)
         RfcResponse response = rfcService.createRfc(userId, orgId, request, null);
 
         assertNotNull(response);
+        assertEquals(100L, response.id());
 
-        // Verifica trimming titolo
         ArgumentCaptor<RFC> captor = ArgumentCaptor.forClass(RFC.class);
         verify(rfcRepository).save(captor.capture());
         assertEquals("My RFC", captor.getValue().getTitle());
-        verify(ingestionService).ingestRFC(any(RFC.class));
+
         verify(userReviewerRepository).saveAll(anyList());
+
+        verify(ingestionService).ingestRFC(any(RFC.class));
+
+        verify(eventPublisher).publishEvent(any(Object.class));
     }
 
     @Test

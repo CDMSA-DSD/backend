@@ -6,12 +6,14 @@ import dsd.api.cdmsa.dto.*;
 import dsd.api.cdmsa.model.*;
 import dsd.api.cdmsa.exception.RfcAlternativeNotAllowedException;
 import dsd.api.cdmsa.exception.RfcInvalidStatusException;
+import dsd.api.cdmsa.model.event.AdrPublishedEvent;
 import dsd.api.cdmsa.repository.AdrRepository;
 import dsd.api.cdmsa.repository.AlternativeRepository;
 import dsd.api.cdmsa.repository.RfcRepository;
 import dsd.api.cdmsa.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
@@ -34,6 +36,8 @@ public class AdrService {
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate;
     private final IngestionService ingestionService;
+    private final ApplicationEventPublisher eventPublisher;
+    private final ContextService contextService;
 
     @Transactional
     public AdrResponse createAdr(Long userId, Long orgId, CreateAdrRequest request) {
@@ -244,6 +248,7 @@ public class AdrService {
         );
     }
 
+    @Transactional
     public AdrResponse publishAdr(PublishAdrRequest request, Long userId){
         ADR adr = adrRepository.findById(request.adrId())
                 .orElseThrow(() -> new EntityNotFoundException("ADR not found with id " + request.adrId()));
@@ -268,6 +273,32 @@ public class AdrService {
         adr = adrRepository.save(adr);
 
         ingestionService.ingestADR(adr);
+
+        Set<Long> uniqueUserIds = new HashSet<>();
+
+        adr.getRfc().getUserReviewers().forEach(ur -> uniqueUserIds.add(ur.getUser().getId()));
+
+        if (adr.getRfc().getContextReviewers() != null) {
+            adr.getRfc().getContextReviewers().forEach(cr -> {
+                contextService.getMembersForNotification(cr.getContext().getId()).forEach(m ->
+                        uniqueUserIds.add(m.userId())
+                );
+            });
+        }
+
+        if (adr.getRfc().getObservers() != null) {
+            adr.getRfc().getObservers().forEach(obs -> uniqueUserIds.add(obs.getUser().getId()));
+        }
+
+        uniqueUserIds.remove(userId);
+
+        eventPublisher.publishEvent(new AdrPublishedEvent(
+                org.getId(),
+                adr.getRfc().getId(),
+                adr.getId(),
+                adr.getTitle(),
+                new ArrayList<>(uniqueUserIds)
+        ));
 
         return new AdrResponse(
                 adr.getId(),

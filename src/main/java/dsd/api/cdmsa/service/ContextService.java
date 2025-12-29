@@ -4,6 +4,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import dsd.api.cdmsa.model.event.ContextAdminDemotedEvent;
+import dsd.api.cdmsa.model.event.ContextAdminPromotedEvent;
+import dsd.api.cdmsa.model.event.UserAddedToContextEvent;
+import dsd.api.cdmsa.model.event.UserRemovedFromContextEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +41,8 @@ public class ContextService {
     private final ContextRepository contextRepository;
     private final UserRepository userRepository;
     private final ContextMembershipRepository membershipRepository;
+
+    private final ApplicationEventPublisher eventPublisher;
 
     // =============================================================================
     // useful methods
@@ -302,6 +309,14 @@ public class ContextService {
         membership.setContextAdmin(true);
         membershipRepository.save(membership);
 
+        eventPublisher.publishEvent(new ContextAdminPromotedEvent(
+                context.getOrganization().getId(),
+                contextId,
+                context.getName(),
+                membership.getUser().getId(),
+                actingUser.getEmail() // who made the promotion
+        ));
+
         return ContextAdminResponse.fromMembership(membership);
     }
 
@@ -323,6 +338,14 @@ public class ContextService {
 
         membership.setContextAdmin(false);
         membershipRepository.save(membership);
+
+        eventPublisher.publishEvent(new ContextAdminDemotedEvent(
+                org.getId(),
+                contextId,
+                context.getName(),
+                targetUserId,
+                actingUser.getEmail()
+        ));
     }
 
     // -------- US-10: lists all current Context Admins for a specific context ---
@@ -374,8 +397,11 @@ public class ContextService {
     @Transactional
     public ContextMemberResponse addMember(UserPrincipal principal, Long contextId, AddContextMemberRequest request) {
 
+        User actingUser = principal.getUser();
+
         User targetUser = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new UserNotFoundException(request.email()));
+
         if (!targetUser.getOrg().getId().equals(principal.getOrgId())) {
             throw new UserNotFoundException(request.email());
         }
@@ -393,6 +419,15 @@ public class ContextService {
         membership.setContextAdmin(false);
 
         ContextMembership saved = membershipRepository.save(membership);
+
+        eventPublisher.publishEvent(new UserAddedToContextEvent(
+                context.getOrganization().getId(),
+                contextId,
+                context.getName(),
+                targetUser.getId(),
+                actingUser.getEmail()
+        ));
+
         return ContextMemberResponse.fromMembership(saved);
     }
 
@@ -422,6 +457,14 @@ public class ContextService {
                 .orElseThrow(() -> new ContextBadRequestException("User is not a member of this context"));
 
         membershipRepository.delete(membership);
+
+        eventPublisher.publishEvent(new UserRemovedFromContextEvent(
+                org.getId(),
+                contextId,
+                context.getName(),
+                targetUserId,
+                actingUser.getEmail()
+        ));
     }
 
     // ---------- US-09: list all of the members of a context -----------------
@@ -439,6 +482,14 @@ public class ContextService {
         //             "Only organization admins or context admins can view context members");
         // }
 
+        return membershipRepository.findByContextId(contextId)
+                .stream()
+                .map(ContextMemberResponse::fromMembership)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ContextMemberResponse> getMembersForNotification(Long contextId) {
         return membershipRepository.findByContextId(contextId)
                 .stream()
                 .map(ContextMemberResponse::fromMembership)

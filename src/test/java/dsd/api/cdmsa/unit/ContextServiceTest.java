@@ -41,6 +41,7 @@ import dsd.api.cdmsa.repository.ContextMembershipRepository;
 import dsd.api.cdmsa.repository.ContextRepository;
 import dsd.api.cdmsa.repository.UserRepository;
 import dsd.api.cdmsa.service.ContextService;
+import org.springframework.context.ApplicationEventPublisher;
 
 /**
  * Unit tests for ContextService.
@@ -57,6 +58,9 @@ class ContextServiceTest {
 
         @Mock
         private ContextMembershipRepository membershipRepository;
+
+        @Mock
+        private ApplicationEventPublisher eventPublisher;
 
         @InjectMocks
         private ContextService contextService;
@@ -280,7 +284,8 @@ class ContextServiceTest {
                 User actingUser = new User();
                 actingUser.setId(actingUserId);
                 actingUser.setOrg(org);
-                org.setAdminUser(actingUser); // acting user es admin org
+                actingUser.setEmail("admin@test.com");
+                org.setAdminUser(actingUser);
 
                 User targetUser = new User();
                 targetUser.setId(targetUserId);
@@ -301,15 +306,19 @@ class ContextServiceTest {
                 when(contextRepository.findById(contextId)).thenReturn(Optional.of(context));
                 when(userRepository.findById(targetUserId)).thenReturn(Optional.of(targetUser));
                 when(membershipRepository.findByContextIdAndUserId(contextId, targetUserId))
-                                .thenReturn(Optional.of(membership));
+                        .thenReturn(Optional.of(membership));
 
                 ContextAdminResponse response = contextService.promoteContextAdmin(actingUserId, contextId, request);
 
                 assertNotNull(response);
                 assertTrue(membership.isContextAdmin());
                 verify(membershipRepository).save(membership);
+                verify(eventPublisher).publishEvent(any(Object.class));
         }
 
+        // ------------------------------------------------------------
+        // demoteContextAdmin
+        // ------------------------------------------------------------
         @Test
         void demoteContextAdmin_shouldDemote_whenActingUserIsOrgAdmin() {
                 Long actingUserId = 1L;
@@ -322,6 +331,7 @@ class ContextServiceTest {
                 User actingUser = new User();
                 actingUser.setId(actingUserId);
                 actingUser.setOrg(org);
+                actingUser.setEmail("admin@test.com");
                 org.setAdminUser(actingUser);
 
                 Context context = new Context();
@@ -336,33 +346,33 @@ class ContextServiceTest {
                 when(userRepository.findById(actingUserId)).thenReturn(Optional.of(actingUser));
                 when(contextRepository.findById(contextId)).thenReturn(Optional.of(context));
                 when(membershipRepository.findByContextIdAndUserId(contextId, targetUserId))
-                                .thenReturn(Optional.of(membership));
+                        .thenReturn(Optional.of(membership));
 
                 contextService.demoteContextAdmin(actingUserId, contextId, targetUserId);
 
                 assertFalse(membership.isContextAdmin());
                 verify(membershipRepository).save(membership);
+                verify(eventPublisher).publishEvent(any(Object.class));
         }
 
         // ------------------------------------------------------------
-        // addMember / removeMember / listMembers
+        // addMember
         // ------------------------------------------------------------
-
         @Test
         void addMember_shouldAddMember_whenActingUserIsOrgAdminAndUserBelongsToOrg() {
                 Long contextId = 100L;
                 String email = "member@example.com";
 
-                // Organización
                 Organization org = new Organization();
                 org.setId(10L);
 
-                // Contexto
                 Context context = new Context();
                 context.setId(contextId);
                 context.setOrganization(org);
 
-                // Usuario que vamos a añadir como miembro
+                User actingUser = new User();
+                actingUser.setEmail("acting@test.com");
+
                 User targetUser = new User();
                 targetUser.setId(2L);
                 targetUser.setEmail(email);
@@ -370,51 +380,44 @@ class ContextServiceTest {
 
                 AddContextMemberRequest request = new AddContextMemberRequest(email);
 
-                // Mock del principal autenticado
                 UserPrincipal principal = mock(UserPrincipal.class);
                 when(principal.getOrgId()).thenReturn(org.getId());
+                when(principal.getUser()).thenReturn(actingUser);
 
-                // Mocks repos
                 when(userRepository.findByEmail(email)).thenReturn(Optional.of(targetUser));
                 when(membershipRepository.existsByContextIdAndUserId(contextId, targetUser.getId()))
-                                .thenReturn(false);
+                        .thenReturn(false);
                 when(contextRepository.findById(contextId)).thenReturn(Optional.of(context));
                 when(membershipRepository.save(any(ContextMembership.class)))
-                                .thenAnswer(invocation -> invocation.getArgument(0));
+                        .thenAnswer(invocation -> invocation.getArgument(0));
 
-                // Ejecutar
                 ContextMemberResponse response = contextService.addMember(principal, contextId, request);
 
-                // Verificaciones
                 assertNotNull(response);
                 verify(membershipRepository).save(any(ContextMembership.class));
+                verify(eventPublisher).publishEvent(any(Object.class));
         }
 
+        // ------------------------------------------------------------
+        // listMembers
+        // ------------------------------------------------------------
         @Test
-        void listMembers_shouldThrowForbidden_whenUserCannotManageMembers() {
-                Long actingUserId = 1L;
+        void listMembers_shouldReturnList_whenContextExists() {
                 Long contextId = 100L;
-
-                Organization org = new Organization();
-                org.setId(10L);
-
-                User actingUser = new User();
-                actingUser.setId(actingUserId);
-                actingUser.setOrg(org);
-                // NO adminUser => no es admin org
-                org.setAdminUser(null);
+                Long actingUserId = 1L;
 
                 Context context = new Context();
                 context.setId(contextId);
-                context.setOrganization(org);
 
-                when(userRepository.findById(actingUserId)).thenReturn(Optional.of(actingUser));
+                ContextMembership m = new ContextMembership();
+                m.setUser(new User());
+
                 when(contextRepository.findById(contextId)).thenReturn(Optional.of(context));
-                // no es context admin tampoco
-                when(membershipRepository.existsByContextIdAndUserIdAndContextAdminTrue(contextId, actingUserId))
-                                .thenReturn(false);
+                when(membershipRepository.findByContextId(contextId)).thenReturn(List.of(m));
 
-                assertThrows(ContextForbiddenException.class,
-                                () -> contextService.listMembers(actingUserId, contextId));
+                List<ContextMemberResponse> result = contextService.listMembers(actingUserId, contextId);
+
+                assertNotNull(result);
+                assertEquals(1, result.size());
         }
 }
