@@ -213,7 +213,10 @@ public class RfcService {
 
         ingestionService.ingestRFC(saved);
 
-        asignReviewersToRfc(new ReviewersRequest(List.of(userId), null), saved.getId(), orgId);
+        if (request.userReviewerIds() != null || request.contextReviewerIds() != null) {
+            ReviewersRequest reviewers = new ReviewersRequest(request.userReviewerIds(), request.contextReviewerIds());
+            asignReviewersToRfc(reviewers, saved.getId(), orgId);
+        }
 
         // Check attachments presence
         if (files != null && !files.isEmpty()) {
@@ -331,7 +334,7 @@ public class RfcService {
      * ensure organization-scoped access to RFC details.
      */
     @Transactional(readOnly = true)
-    public RfcSpecificResponse getRfcByIdForOrg(Long rfcId, Long orgId, Long userId) {
+    public RfcSpecificResponse getRfcByIdForOrg(Long rfcId, Long orgId, Long userId, boolean isReviewer) {
 
         RFC rfc = rfcRepository.findByIdAndOrgId(rfcId, orgId)
                 .orElseThrow(() -> new RfcNotFoundException("RFC not found with id " + rfcId));
@@ -365,6 +368,7 @@ public class RfcService {
                 rfc.getXml(),
                 isAuthor,
                 isWatching,
+                isReviewer,
                 userReviewers,
                 contextReviewrs,
                 detailedRfc.alternatives(),
@@ -638,9 +642,14 @@ public class RfcService {
     public void asignReviewersToRfc(ReviewersRequest reviewers, Long rfcId, Long orgId) {
 
         List<Long> userIds = reviewers.userIds();
-        List<Long> contetxIds = reviewers.contextIds();
+        List<Long> contextIds = reviewers.contextIds();
         RFC rfc = getRfcById(rfcId);
 
+        // Remove existing reviewers
+        userReviewerRepository.deleteByRfcId(rfcId);
+        contextReviewerRepository.deleteByRfcId(rfcId);
+
+        // Add new user reviewers
         if (userIds != null && !userIds.isEmpty()) {
             List<User> users = userService.findAllUsersByid(userIds, orgId);
 
@@ -656,8 +665,9 @@ public class RfcService {
             userReviewerRepository.saveAll(userReviewers);
         }
 
-        if (contetxIds != null && !contetxIds.isEmpty()) {
-            List<Context> contexts = contextService.findAllContextByid(contetxIds);
+        // Add new context reviewers
+        if (contextIds != null && !contextIds.isEmpty()) {
+            List<Context> contexts = contextService.findAllContextByid(contextIds);
 
             List<ContextReviewer> contextReviewers = contexts.stream()
                     .map(context -> {
@@ -731,7 +741,7 @@ public class RfcService {
         rfc.setXml(xmlContent != null ? xmlContent.trim() : null);
 
         rfcRepository.save(rfc);
-        return getRfcByIdForOrg(rfcId, rfc.getOrg().getId(), userId);
+        return getRfcByIdForOrg(rfcId, rfc.getOrg().getId(), userId, true);
     }
 
     @Transactional
@@ -838,7 +848,7 @@ public class RfcService {
         RFC saved = rfcRepository.save(rfc);
         ingestionService.ingestRFC(saved);
 
-        return getRfcByIdForOrg(rfcId, orgId, userId);
+        return getRfcByIdForOrg(rfcId, orgId, userId, true);
     }
 
     @Transactional

@@ -136,7 +136,9 @@ public class RfcController {
             @AuthenticationPrincipal UserPrincipal principal) {
 
         User user = principal.getUser();
-        RfcSpecificResponse response = rfcService.getRfcByIdForOrg(rfcId, principal.getOrgId(), user.getId());
+        boolean isReviewer = rfcService.isReviewer(user, rfcId);
+
+        RfcSpecificResponse response = rfcService.getRfcByIdForOrg(rfcId, principal.getOrgId(), user.getId(), isReviewer);
 
         return ResponseEntity.ok(response);
     }
@@ -203,14 +205,12 @@ public class RfcController {
     }
 
     @PostMapping("/alternatives/{altId}/vote")
-    @PreAuthorize("@permissionService.canReviewRfc(principal,#altId)")
+    @PreAuthorize("@permissionService.canVoteRfc(principal,#altId)")
     public ResponseEntity<VoteResponse> voteForAlternative(
             @PathVariable Long altId,
             @RequestBody VoteRequest voteRequest,
             @AuthenticationPrincipal UserPrincipal principal) {
-
-        // check if user is a reviewer, probably we need also the rfcId to see status =
-        // under review
+        
         User user = principal.getUser();
 
         VoteResponse resp = rfcService.voteForAlternative(altId, user.getId(), voteRequest.outcome());
