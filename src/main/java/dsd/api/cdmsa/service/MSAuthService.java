@@ -48,9 +48,6 @@ public class MSAuthService {
     @Value("${microsoft.oauth.client-secret}")
     private String secretId;
 
-    @Value("${microsoft.oauth.issuer-uri}")
-    private String issuerUri;
-
     @Value("${microsoft.oauth.token-url}")
     private String tokenUrl;
 
@@ -110,7 +107,7 @@ public class MSAuthService {
 
     private boolean isIssuerValid(JWTClaimsSet claims) {
         System.out.println(claims.getIssuer());
-        return claims.getIssuer().equals(issuerUri);
+        return claims.getIssuer().startsWith("https://login.microsoftonline.com/");
     }
 
     private void validateClaims(JWTClaimsSet claims) throws Exception {

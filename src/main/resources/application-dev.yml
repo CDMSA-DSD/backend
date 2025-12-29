@@ -35,9 +35,9 @@ microsoft:
   oauth:
     client-id: "2d32d2ec-e701-4731-88ea-fd409c401198"  
     client-secret: "yCP8Q~HP6txWsOz73y7wyFtU-9-YOukGmlTY6dcy"  
-    redirect-uri: "http://localhost:3000/auth/microsoft"  
+    redirect-uri: "http://localhost:3000/auth/microsoft"  # Uncoment for dev
+   # redirect-uri: "https://dsd-prod.ansquer.fr/auth/microsoft" # Uncoment for prod
     scope: "openid profile email"  
-    issuer-uri: "https://login.microsoftonline.com/9188040d-6c67-4c5b-b112-36a304b66dad/v2.0"
     token-url: "https://login.microsoftonline.com/common/oauth2/v2.0/token"
 
 
