@@ -94,7 +94,7 @@ public class UserService {
         String userDomain = email.split("@")[1];
         String orgDomain = org.getDomain();
 
-        return org.isEmailDomainRequired()
+        return !org.isEmailDomainRequired()
                 || userDomain.equals(orgDomain.toLowerCase())
                 || userDomain.endsWith("." + orgDomain.toLowerCase());
     }
