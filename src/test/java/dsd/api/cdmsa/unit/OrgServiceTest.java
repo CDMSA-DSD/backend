@@ -261,6 +261,7 @@ class OrgServiceTest {
                 "  NewName  ",
                 "  NewDesc  ",
                 "  new.com  ",
+                false,
                 "  repo1  ",
                 "  main  ");
 

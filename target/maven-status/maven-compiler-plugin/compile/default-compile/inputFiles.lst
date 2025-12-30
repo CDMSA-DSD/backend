@@ -52,6 +52,7 @@
 /home/gabriel/Uni/4o-ano/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/LinkResponse.java
 /home/gabriel/Uni/4o-ano/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/LoginRequest.java
 /home/gabriel/Uni/4o-ano/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/LoginResponse.java
+/home/gabriel/Uni/4o-ano/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/MSOrgSignInRequest.java
 /home/gabriel/Uni/4o-ano/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/MSSignInRequest.java
 /home/gabriel/Uni/4o-ano/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/NotificationResponse.java
 /home/gabriel/Uni/4o-ano/1S/DSD/backend/src/main/java/dsd/api/cdmsa/dto/NotificationStatusResponse.java

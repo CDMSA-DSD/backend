@@ -1,8 +1,5 @@
 package dsd.api.cdmsa.service;
 
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
-
-import java.util.Map;
 import java.util.List;
 import java.util.Arrays;
 
@@ -16,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpMethod;
 import com.fasterxml.jackson.databind.JsonNode;
 
-import dsd.api.cdmsa.controller.UserController;
 import dsd.api.cdmsa.exception.OrgExistsException;
 import dsd.api.cdmsa.exception.OrgNotFoundException;
 import dsd.api.cdmsa.model.Organization;
@@ -34,6 +30,7 @@ public class OrgService {
         private final OrganizationRepository orgRepo;
         private final UserRepository userRepo;
         private final UserService userService;
+        private final MSAuthService msAuthService;
 
         public boolean existOrg(String name) {
                 return orgRepo.existsByName(name);
@@ -44,10 +41,24 @@ public class OrgService {
         }
 
         @Transactional
-        public OrgAdminResponse createOrg(OrgAdminRequest dto) {
+        public OrgAdminResponse createOrg(OrgAdminRequest signIn, MSOrgSignInRequest msSignIn) {
 
-                OrganizationResponse org = dto.org();
-                SignInRequest user = dto.admin();
+                OrganizationResponse org;
+                SignInRequest user;
+
+                if (signIn != null) {
+                        org = signIn.org();
+                        user = signIn.admin();
+                } else {
+                        org = msSignIn.org();
+                        UserInfo userInfo = msAuthService.extractUserInfo(msSignIn.code());
+                        user = new SignInRequest(userInfo.email(),
+                                        userInfo.firstname(),
+                                        userInfo.lastname(),
+                                        "OAUTH",
+                                        userInfo.providerId());
+
+                }
 
                 // Check if a Org already exist
                 if (!existOrg(org.companyName())) {
@@ -78,13 +89,7 @@ public class OrgService {
 
                         newOrg = orgRepo.save(newOrg); // Updated org
 
-                        // Create the admin's URI
-                        Map<String, Object> adminUri = Map.of(
-                                        "admin", Map.of(
-                                                        "href", linkTo(UserController.class).slash(admin.getId())
-                                                                        .toUri().toString()));
-
-                        return new OrgAdminResponse(newOrg.getId(), adminUri);
+                        return new OrgAdminResponse(newOrg.getId(), userService.toLoginResponse(admin));
 
                 }
                 // Instead throw a exception that return 409- CONFLICT
@@ -113,6 +118,7 @@ public class OrgService {
                                 org.getName(),
                                 org.getDescription(),
                                 org.getDomain(),
+                                org.isEmailDomainRequired(),
                                 org.getSelectedRepoName(),
                                 org.getSelectedBranchName(),
                                 org.getRepoOwner());
@@ -132,6 +138,7 @@ public class OrgService {
                 org.setName(request.companyName().trim());
                 org.setDescription(request.description().trim());
                 org.setDomain(request.domain().trim());
+                org.setEmailDomainRequired(request.isEmailDomainRequired());
                 org.setSelectedRepoName(request.selectedRepoName() != null ? request.selectedRepoName().trim() : null);
                 org.setSelectedBranchName(
                                 request.selectedBranchName() != null ? request.selectedBranchName().trim() : null);
@@ -141,6 +148,7 @@ public class OrgService {
                                 updatedOrg.getName(),
                                 updatedOrg.getDescription(),
                                 updatedOrg.getDomain(),
+                                updatedOrg.isEmailDomainRequired(),
                                 updatedOrg.getSelectedRepoName(),
                                 updatedOrg.getSelectedBranchName(),
                                 updatedOrg.getRepoOwner());
@@ -251,6 +259,7 @@ public class OrgService {
                                 org.getName(),
                                 org.getDescription(),
                                 org.getDomain(),
+                                org.isEmailDomainRequired(),
                                 org.getSelectedRepoName(),
                                 org.getSelectedBranchName(),
                                 org.getRepoOwner());

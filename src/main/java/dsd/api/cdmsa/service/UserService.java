@@ -57,7 +57,7 @@ public class UserService {
         throw new UserExistsException(user.getFirstname() + " " + user.getLastname());
     }
 
-    private LoginResponse toLoginResponse(User user) {
+    public LoginResponse toLoginResponse(User user) {
         String token = jwtService.generateToken(user);
         boolean isAdmin = isOrgAdmin(user);
         List<ContextByAdminResponse> contextsIsAdmin = contextService.findContextByAdmin(user);
@@ -94,7 +94,7 @@ public class UserService {
         String userDomain = email.split("@")[1];
         String orgDomain = org.getDomain();
 
-        return orgDomain == null
+        return org.isEmailDomainRequired()
                 || userDomain.equals(orgDomain.toLowerCase())
                 || userDomain.endsWith("." + orgDomain.toLowerCase());
     }

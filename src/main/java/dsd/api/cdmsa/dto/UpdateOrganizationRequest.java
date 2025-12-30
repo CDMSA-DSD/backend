@@ -6,6 +6,7 @@ public record UpdateOrganizationRequest(
         @NotBlank String companyName,
         @NotBlank String description,
         @NotBlank String domain,
+        boolean isEmailDomainRequired,
         String selectedRepoName,
         String selectedBranchName
         ) {

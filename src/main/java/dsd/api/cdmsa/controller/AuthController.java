@@ -3,18 +3,16 @@ package dsd.api.cdmsa.controller;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
-import java.util.Map;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import dsd.api.cdmsa.dto.LoginRequest;
 import dsd.api.cdmsa.dto.LoginResponse;
+import dsd.api.cdmsa.dto.MSOrgSignInRequest;
 import dsd.api.cdmsa.dto.MSSignInRequest;
 import dsd.api.cdmsa.dto.OrgAdminRequest;
 import dsd.api.cdmsa.dto.OrgAdminResponse;
 import dsd.api.cdmsa.dto.SignInRequest;
-import dsd.api.cdmsa.model.User;
 import dsd.api.cdmsa.service.OrgService;
 import dsd.api.cdmsa.service.UserService;
 import jakarta.validation.Valid;
@@ -31,13 +29,23 @@ public class AuthController {
     private final UserService userService;
 
     @PostMapping("/register-org")
-    public ResponseEntity<Map<String, Object>> registerOrg(@Valid @RequestBody OrgAdminRequest newOrg) {
+    public ResponseEntity<LoginResponse> registerOrg(@Valid @RequestBody OrgAdminRequest newOrg) {
         // Store Org
-        OrgAdminResponse dto = orgService.createOrg(newOrg);
+        OrgAdminResponse dto = orgService.createOrg(newOrg, null);
 
         // Return org's URI in header and admin's URI in body
         return ResponseEntity.created(linkTo(methodOn(OrgController.class).getOrg(dto.orgId())).toUri())
-                .body(dto.adminUri());
+                .body(dto.admin());
+    }
+
+    @PostMapping("/register-org/oauth2/microsoft")
+    public ResponseEntity<LoginResponse> registerOrgMS(@RequestBody MSOrgSignInRequest code){
+        // Store Org
+        OrgAdminResponse dto = orgService.createOrg(null, code);
+
+        // Return org's URI in header and admin's URI in body
+        return ResponseEntity.created(linkTo(methodOn(OrgController.class).getOrg(dto.orgId())).toUri())
+                .body(dto.admin());
     }
 
     @PostMapping("/register-invitation")
