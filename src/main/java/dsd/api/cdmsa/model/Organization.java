@@ -29,6 +29,9 @@ public class Organization {
     private String description;
 
     @Column
+    private boolean EmailDomainRequired = false;
+
+    @Column
     private String gitHubToken;
 
     @Column

@@ -23,6 +23,12 @@ public class UserExceptionAdvice {
         return new ErrorMessage(ex.getMessage());
     }
 
+    @ExceptionHandler(InvalidDomainException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    ErrorMessage InvalidDomainHandler(InvalidDomainException ex) {
+        return new ErrorMessage(ex.getMessage());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorMessage handleValidationException (MethodArgumentNotValidException ex) {

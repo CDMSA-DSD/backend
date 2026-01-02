@@ -2,14 +2,35 @@ spring:
   application:
     name: cdmsa
 
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
+      - org.springframework.ai.model.azure.openai.autoconfigure.AzureOpenAiChatAutoConfiguration
 
   ai:
     openai:
-      api-key: "put here your openrouter token"
+      api-key: "openrouter key"
       base-url: https://openrouter.ai/api
       chat:
         options:
           model: mistralai/mistral-7b-instruct:free
+
+    azure:
+      openai:
+        api-key: "AOsntraW4FVL35jPwyVjduMrg4XdRXUWHQvXHeXQAJaEx5FgGU6IJQQJ99BLACfhMk5XJ3w3AAABACOG2tW2"
+        endpoint: "https://cdmsadsd.openai.azure.com/" 
+        embedding:
+          options:
+            deployment-name: text-embedding-3-small
+
+    vectorstore:
+      pgvector:
+        # Create table vector_store
+        initialize-schema: true
+        index-type: HNSW
+        # Model dimension
+        dimension: 1536
+        distance-type: COSINE_DISTANCE
 
 
 server:

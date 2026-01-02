@@ -13,8 +13,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import dsd.api.cdmsa.exception.InvalidDomainException;
 import dsd.api.cdmsa.exception.UserExistsException;
 import dsd.api.cdmsa.exception.UserNotFoundException;
+import dsd.api.cdmsa.model.Organization;
 import dsd.api.cdmsa.model.OrganizationInvitation;
 import dsd.api.cdmsa.model.User;
 import dsd.api.cdmsa.model.UserPrincipal;
@@ -55,7 +57,7 @@ public class UserService {
         throw new UserExistsException(user.getFirstname() + " " + user.getLastname());
     }
 
-    private LoginResponse toLoginResponse(User user) {
+    public LoginResponse toLoginResponse(User user) {
         String token = jwtService.generateToken(user);
         boolean isAdmin = isOrgAdmin(user);
         List<ContextByAdminResponse> contextsIsAdmin = contextService.findContextByAdmin(user);
@@ -70,6 +72,10 @@ public class UserService {
         OrganizationInvitation invitation = invitationService.getInvitationByToken(token); // retrive invitation with
                                                                                            // that token
 
+        if (!isDomainCorrect(registration.email(), invitation.getOrg())) {
+            throw new InvalidDomainException();
+        }
+
         // Creates the user (set all the parameters)
         User user = new User();
         user.setFirstname(registration.firstname());
@@ -80,6 +86,17 @@ public class UserService {
         user.setProviderUserId(registration.providerId());
 
         return toLoginResponse(createUser(user));
+    }
+
+    private boolean isDomainCorrect(
+            String email,
+            Organization org) {
+        String userDomain = email.split("@")[1];
+        String orgDomain = org.getDomain();
+
+        return !org.isEmailDomainRequired()
+                || userDomain.equals(orgDomain.toLowerCase())
+                || userDomain.endsWith("." + orgDomain.toLowerCase());
     }
 
     public LoginResponse login(LoginRequest login) {
