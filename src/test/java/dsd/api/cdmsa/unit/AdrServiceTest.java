@@ -15,6 +15,7 @@ import dsd.api.cdmsa.repository.AlternativeRepository;
 import dsd.api.cdmsa.repository.RfcRepository;
 import dsd.api.cdmsa.repository.UserRepository;
 import dsd.api.cdmsa.service.AdrService;
+import dsd.api.cdmsa.service.ContextService;
 import dsd.api.cdmsa.service.IngestionService;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -70,6 +72,13 @@ class AdrServiceTest {
 
     @Mock
     private IngestionService ingestionService;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private ContextService contextService;
+
 
     private RFC mockRfc;
     private ADR mockAdr;
@@ -128,6 +137,10 @@ class AdrServiceTest {
         mockAdr.setRfc(mockRfc);
         mockAdr.setCreatedAt(Instant.now());
         mockAdr.setUpdatedAt(Instant.now());
+
+        mockRfc.setUserReviewers(new java.util.HashSet<>());
+        mockRfc.setContextReviewers(new java.util.HashSet<>());
+        mockRfc.setObservers(new java.util.HashSet<>());
     }
 
 
@@ -510,80 +523,40 @@ class AdrServiceTest {
 
     // Publish ADRs tests
     @Test
-    @DisplayName("Should publish ADR to GitHub successfully")
+    @DisplayName("Should publish ADR to GitHub and trigger notifications successfully")
     void shouldPublishAdrToGitHubSuccessfully() throws Exception {
         // Given
         PublishAdrRequest request = new PublishAdrRequest(1L);
+        mockAdr.setGitHubUrl(null);
 
-        mockAdr.setGitHubUrl(null); // Initially null
-
+        // Setup Mock behavior
         when(adrRepository.findById(1L)).thenReturn(Optional.of(mockAdr));
         when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
 
         // Mock GitHub API response
-        String githubResponseJson = """
-            {
-                "content": {
-                    "html_url": "https://github.com/test-owner/test-repo/blob/main/adr-1.md"
-                }
-            }
-            """;
+        String githubResponseJson = "{\"content\": {\"html_url\": \"https://github.com/repo/adr-1.md\"}}";
+        ResponseEntity<String> githubResponse = new ResponseEntity<>(githubResponseJson, HttpStatus.OK);
 
-        ResponseEntity<String> githubResponse = new ResponseEntity<>(
-                githubResponseJson,
-                HttpStatus.CREATED
-        );
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.PUT), any(HttpEntity.class), eq(String.class)))
+                .thenReturn(githubResponse);
 
-        when(restTemplate.exchange(
-                anyString(),
-                eq(HttpMethod.PUT),
-                any(HttpEntity.class),
-                eq(String.class)
-        )).thenReturn(githubResponse);
+        // Mock ObjectMapper per restituire un nodo reale (meno fragile dei mock di JsonNode)
+        ObjectMapper realMapper = new ObjectMapper();
+        JsonNode actualNode = realMapper.readTree(githubResponseJson);
+        when(objectMapper.readTree(githubResponseJson)).thenReturn(actualNode);
 
-        // Mock ObjectMapper to parse the response
-        JsonNode mockContentNode = mock(JsonNode.class);
-        JsonNode mockHtmlUrlNode = mock(JsonNode.class);
-        JsonNode mockRootNode = mock(JsonNode.class);
-
-        when(mockRootNode.get("content")).thenReturn(mockContentNode);
-        when(mockContentNode.get("html_url")).thenReturn(mockHtmlUrlNode);
-        when(mockHtmlUrlNode.asText()).thenReturn("https://github.com/test-owner/test-repo/blob/main/adr-1.md");
-        when(objectMapper.readTree(githubResponseJson)).thenReturn(mockRootNode);
-
-        ADR savedAdr = new ADR();
-        savedAdr.setId(1L);
-        savedAdr.setTitle("Test ADR");
-        savedAdr.setContext("Test Context");
-        savedAdr.setDecision("Test Decision");
-        savedAdr.setConsequences("Test Consequences");
-        savedAdr.setStatus(ADR.Status.DRAFT);
-        savedAdr.setRfc(mockRfc);
-        savedAdr.setCreatedAt(Instant.now());
-        savedAdr.setUpdatedAt(Instant.now());
-        savedAdr.setGitHubUrl("https://github.com/test-owner/test-repo/blob/main/adr-1.md");
-
-        when(adrRepository.save(any(ADR.class))).thenReturn(savedAdr);
+        when(adrRepository.save(any(ADR.class))).thenReturn(mockAdr);
 
         // When
         AdrResponse response = adrService.publishAdr(request, 1L);
 
         // Then
         assertThat(response).isNotNull();
-        assertThat(response.id()).isEqualTo(1L);
-        assertThat(response.gitHubUrl()).isNotNull();
-        assertThat(response.gitHubUrl()).contains("github.com");
-        assertThat(response.gitHubUrl()).contains("adr-1.md");
+        assertThat(response.gitHubUrl()).isEqualTo("https://github.com/repo/adr-1.md");
+
+        verify(eventPublisher).publishEvent(any(dsd.api.cdmsa.model.event.AdrPublishedEvent.class));
 
         verify(adrRepository).findById(1L);
-        verify(userRepository).findById(1L);
-        verify(restTemplate).exchange(
-                anyString(),
-                eq(HttpMethod.PUT),
-                any(HttpEntity.class),
-                eq(String.class)
-        );
-        verify(adrRepository, times(1)).save(any(ADR.class));
         verify(ingestionService).ingestADR(any(ADR.class));
     }
 

@@ -63,6 +63,10 @@ public class Notification {
 
     public enum NotificationType {
         MENTION,
+        PROMOTION,
+        CONTEXT_ASSIGNMENT,
+        REVIEW_ASSIGNMENT,
+        ADR_PUBLISHED,
         RFC_UPDATE,
         APP_NOTIFICATION,
         OTHER

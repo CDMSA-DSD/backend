@@ -12,7 +12,7 @@ import dsd.api.cdmsa.model.RFC;
 @Repository
 public interface ContextReviewerRepository extends JpaRepository<ContextReviewer, ContextRFCId> {
     List<ContextReviewer> findAllByRfc(RFC rfc);
-
+    List<ContextReviewer> findAllByRfcId(Long rfcId);
     void deleteByRfcId(Long rfcId);
     
 }

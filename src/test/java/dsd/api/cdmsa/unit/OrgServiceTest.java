@@ -254,6 +254,8 @@ class OrgServiceTest {
         user.setId(userId);
         user.setOrg(org);
 
+        org.setAdminUser(user);
+
         when(userRepo.findById(userId)).thenReturn(Optional.of(user));
         when(orgRepo.save(any(Organization.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -289,6 +291,8 @@ class OrgServiceTest {
         org.setName("Acme");
         org.setDescription("Desc");
         org.setDomain("acme.com");
+        org.setAdminUser(new User());
+        org.getAdminUser().setId(userId);
 
         User user = new User();
         user.setId(userId);
