@@ -1,6 +1,6 @@
 # cdmsa (Spring Boot)
 
-## Requiermnets
+## Requirements
 - Docker and Docker compose
 
 - A JWT token
