@@ -1,22 +1,65 @@
-# cdmsa (Spring Boot)
+## CDMSA Backend
 
-## Requirements
-- Docker and Docker compose
+### Environment Variables
 
-- A JWT token
+To deploy the project, you need to make a copy of the sample environment file located at:
+
 ```
-head -c 32 /dev/urandom | base64
+src/main/resources/application.yml
 ```
 
-- A key from OpenRouter to use mistralai/mistral-7b-instruct:free
+Place the copy in the same folder and rename it to:
 
-- To use Microsoft OAuth, you must declare an application on Microsoft Registry and get `client-id` and `client-secret`. On Microsoft Registry, don't forget to specify redirect-url to the specific Microsoft address. See example `src/main/ressources/application.yml`
+```
+application-prod.yml
+```
 
+You will need to obtain the following:
 
+* **A JWT token**
+  On Linux:
 
+  ```bash
+  head -c 32 /dev/urandom | base64
+  ```
 
-## Getting started
+* **An OpenRouter API key**
+  Required to use `mistralai/mistral-7b-instruct:free`.
 
-1. Make a copy of `application.yml` and name it `application-prod.yml` in `src/main/ressources/`
-2. Fill the information gathered earlier.
-3. `docker compose up`
+* **Microsoft OAuth credentials**
+  To use Microsoft OAuth, you must:
+
+  * Register an application in the Microsoft Registry.
+  * Retrieve the `client-id` and `client-secret`.
+  * Configure the `redirect-url` to match the Microsoft OAuth callback URL used by the frontend.
+  * Ensure this same `redirect-url` is also specified in `application-prod.yml`.
+
+---
+
+### Deploy
+
+1. Clone the project.
+2. Configure `application-prod.yml`.
+3. Run:
+
+   ```bash
+   docker compose up -d
+   ```
+
+---
+
+### Local Development
+
+1. Copy your application configuration and rename it to:
+
+   ```
+   application-dev.yml
+   ```
+
+   Adjust the configuration if needed.
+
+2. Edit the Docker Compose file in `dsd-backend` and update the `command` line to:
+
+   ```bash
+   ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+   ```
