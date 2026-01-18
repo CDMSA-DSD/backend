@@ -20,6 +20,3 @@ head -c 32 /dev/urandom | base64
 1. Make a copy of `application.yml` and name it `application-prod.yml` in `src/main/ressources/`
 2. Fill the information gathered earlier.
 3. `docker compose up`
-
-3. Test the application in your browser (default port is 8080):
-    **<http://localhost:8080/hello>**
