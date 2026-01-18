@@ -18,5 +18,15 @@ services:
       timeout: 5s
       retries: 5
 
+  dsd-backend:
+    image: maven:latest
+    container_name: dsd-backend
+    working_dir: /usr/src/mymaven
+    volumes:
+      - ./:/usr/src/mymaven
+    ports:
+      - "8080:8080"
+    command: ./mvnw spring-boot:run -Dspring-boot.run.profiles=prod
+
 volumes:
   postgres_data:

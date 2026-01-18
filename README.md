@@ -1,29 +1,65 @@
-# cdmsa (Spring Boot)
+## CDMSA Backend
 
-## Requiermnets
+### Environment Variables
 
-- Java 17 or above
-- Docker (para MariaDB en dev)
+To deploy the project, you need to make a copy of the sample environment file located at:
 
-## Quick Start (Development)
+```
+src/main/resources/application.yml
+```
 
-### Steps
+Place the copy in the same folder and rename it to:
 
-1. Launch MariaDB with Docker:
+```
+application-prod.yml
+```
 
-    ```bash
-    docker compose up -d
-    ```
+You will need to obtain the following:
 
-2. Run the Spring Boot application with the development profile:
+* **A JWT token**
+  On Linux:
 
-    ```bash
-    ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev # Linux
-    ```
+  ```bash
+  head -c 32 /dev/urandom | base64
+  ```
 
-    ```bash
-    .\mvnw spring-boot:run "-Dspring-boot.run.profiles=dev" # Windows
-    ```
+* **An OpenRouter API key**
+  Required to use `mistralai/mistral-7b-instruct:free`.
 
-3. Test the application in your browser:
-    **<http://localhost:8080/hello>**
+* **Microsoft OAuth credentials**
+  To use Microsoft OAuth, you must:
+
+  * Register an application in the Microsoft Registry.
+  * Retrieve the `client-id` and `client-secret`.
+  * Configure the `redirect-url` to match the Microsoft OAuth callback URL used by the frontend.
+  * Ensure this same `redirect-url` is also specified in `application-prod.yml`.
+
+---
+
+### Deploy
+
+1. Clone the project.
+2. Configure `application-prod.yml`.
+3. Run:
+
+   ```bash
+   docker compose up -d
+   ```
+
+---
+
+### Local Development
+
+1. Copy your application configuration and rename it to:
+
+   ```
+   application-dev.yml
+   ```
+
+   Adjust the configuration if needed.
+
+2. Edit the Docker Compose file in `dsd-backend` and update the `command` line to:
+
+   ```bash
+   ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+   ```
