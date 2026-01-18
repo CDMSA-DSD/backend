@@ -1,39 +1,47 @@
 spring:
-  application:
-    name: cdmsa
+  datasource:
+    url: jdbc:postgresql://database:5432/cdmsa
+    username: cdmsa # Change me if needed
+    password: cdmsa # Change me
+    driver-class-name: org.postgresql.Driver
 
-  autoconfigure:
-    exclude:
-      - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
-      - org.springframework.ai.model.azure.openai.autoconfigure.AzureOpenAiChatAutoConfiguration
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  security:
+    debug: true
 
   ai:
     openai:
-      api-key: "openrouter key"
+      api-key: API_KEY_HERE 
       base-url: https://openrouter.ai/api
       chat:
         options:
           model: mistralai/mistral-7b-instruct:free
 
-    azure:
-      openai:
-        api-key: "AOsntraW4FVL35jPwyVjduMrg4XdRXUWHQvXHeXQAJaEx5FgGU6IJQQJ99BLACfhMk5XJ3w3AAABACOG2tW2"
-        endpoint: "https://cdmsadsd.openai.azure.com/" 
-        embedding:
-          options:
-            deployment-name: text-embedding-3-small
 
-    vectorstore:
-      pgvector:
-        # Create table vector_store
-        initialize-schema: true
-        index-type: HNSW
-        # Model dimension
-        dimension: 1536
-        distance-type: COSINE_DISTANCE
+logging:
+  level:
+    org.springframework.security: TRACE
 
+jwt:
+  secret: JWT_SECRET_HERE
+  expirantion-access-token: 9000000000000000000000000000
 
-server:
-  port: 8080
-
- 
+app:
+  frontend:
+    base-url: http://localhost:3000 # Change me for production server
+  
+microsoft:
+  oauth:
+    client-id: CLIENT_ID_HERE
+    client-secret: CLIENT_SECRET_HERE
+    redirect-uri: "http://localhost:3000/auth/microsoft" # You need to set this address on Microsoft App Registry. CHANGE ME for production server
+    scope: "openid profile email"  
+    issuer-uri: "https://login.microsoftonline.com/9188040d-6c67-4c5b-b112-36a304b66dad/v2.0"
+    token-url: "https://login.microsoftonline.com/common/oauth2/v2.0/token"
